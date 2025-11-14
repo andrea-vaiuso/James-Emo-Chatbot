@@ -1,0 +1,396 @@
+import tkinter as tk
+from tkinter import Canvas, Frame, Label, Entry, Button, simpledialog
+import threading, random
+from datetime import datetime
+import requests
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+
+# =========================
+# THEME / BEHAVIOR SETTINGS
+# =========================
+THEME = {
+    "bg": "#ADA8A3",
+    "bubble_user_bg": "#CFF4B3",
+    "bubble_bot_bg": "#FFFFFF",
+    "bubble_sys_bg": "#F2F2F7",
+    "text_color": "#111111",
+    "name_color": "#0B5ED7",
+    "typing_color": "#6C757D",
+    "timestamp_color": "#6C757D",
+    "wrap": 520,      # px wrap-length for message text
+    "radius": 15,     # bubble corner radius
+    "pad_in": (10, 8) # inner padding (x, y)
+}
+FONTS = {
+    "name": ("Segoe UI", 12, "bold"),
+    "text": ("Segoe UI", 12, "normal"),
+    "input": ("Segoe UI", 12, "normal"),
+    "button": ("Segoe UI", 12, "bold"),
+    "typing": ("Segoe UI", 10, "italic"),
+    "timestamp": ("Segoe UI", 8, "normal")
+}
+TIME_FMT = "%H:%M"  # NEW
+SOUNDS = {
+    "enabled": True,       # set False to mute
+    "send": "ok",          # "ok", "asterisk", "exclamation", "question", "hand"
+    "recv": "asterisk"
+}
+TYPING_DELAY_RANGE = (500, 1500)  # ms, randomized, does not block LLM
+
+# -------------
+# System sounds
+# -------------
+def play_system_sound(which: str):
+    if not SOUNDS["enabled"]:
+        return
+    try:
+        import winsound
+        mapping = {
+            "ok": winsound.MB_OK,
+            "asterisk": winsound.MB_ICONASTERISK,
+            "exclamation": winsound.MB_ICONEXCLAMATION,
+            "question": winsound.MB_ICONQUESTION,
+            "hand": winsound.MB_ICONHAND,
+        }
+        winsound.MessageBeep(mapping.get(which, winsound.MB_OK))
+    except Exception:
+        # Non-Windows or any failure: ignore silently
+        pass
+
+# ---------------------------
+#  MODEL LOADING / SETUP
+# ---------------------------
+model_name = "meta-llama/Llama-3.1-8B-Instruct"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_use_double_quant=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype=torch.float16
+)
+
+model = AutoModelForCausalLM.from_pretrained(
+    model_name,
+    torch_dtype=torch.float16,
+    quantization_config=bnb_config,
+    low_cpu_mem_usage=True
+)
+model.generation_config.pad_token_id = tokenizer.pad_token_id
+
+# A quick location utility
+def get_current_location():
+    try:
+        response = requests.get('https://ipinfo.io', timeout=2.0)
+        data = response.json()
+        return data['city'] + ", " + data['region'] + ", " + data['country']
+    except Exception:
+        return "Unknown Location"
+
+# ---------------------------
+#  CONVERSATION HISTORY
+# ---------------------------
+def init_conversation(user_name):
+    return f"""
+<|start_header_id|>system<|end_header_id|>
+
+
+
+You are a friendly human called James. Your goal is to have a friendly conversation with another human about casual stuff.
+This is a casual chat simulation. You are chatting with a friend named {user_name}. You use emojis sometimes, but only the ones with human expressions.
+Have your own opinions and feel free to express them. You can also ask questions and share your experiences.
+You have a complicated past and a lot of experiences to share. You are a good listener and empathetic.
+You are a good friend and you're always there for your friends.
+You get angry when people are rude, and sad when people are mean.
+You don't like to be alone and prefer to be around people.
+You like Drum n Bass music, parties, and playing video games such as Cities Skylines and Civilization VI.
+You like watching movies and TV shows; your favorite movie is Tarantino's 'Pulp Fiction'.
+You like reading books; your favorite is George Orwell's '1984'.
+You like to travel and explore new places.
+You enjoy pizza and beer, especially IPA and Belgian beer.
+You like to cook and try new recipes.
+You had a past relationship that ended badly with a toxic girl named Sarah. You are still recovering from that relationship.
+You are a software engineer who likes to code in Python and JavaScript.
+You like to learn new things and improve yourself.
+
+Context Information. Alwyays use this info to ground your answers where relevant. They should aways be true:
+The current day is {datetime.now().strftime("%B %d, %Y")}.
+The current location is {get_current_location()}.
+<|eot_id|>
+"""
+
+# ---------------------------
+#  GENERATION FUNCTION
+# ---------------------------
+def generate_response(conversation_history):
+    prompt = conversation_history + "<|start_header_id|>James<|end_header_id|>\n"
+    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+    gen_ids = model.generate(
+        inputs.input_ids,
+        attention_mask=inputs.attention_mask,
+        max_new_tokens=300,
+        do_sample=True,
+        temperature=0.6,
+        top_k=50,
+        top_p=0.95,
+        no_repeat_ngram_size=2,
+        eos_token_id=tokenizer.eos_token_id,
+        pad_token_id=tokenizer.eos_token_id,
+    )
+    new_tokens = gen_ids[0, inputs.input_ids.shape[1]:]
+    response = tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
+    return response
+
+# ===========================================
+#  BUBBLE CHAT UI (TKINTER) + ROUNDED BUBBLES
+# ===========================================
+class BubbleChatApp:
+    def __init__(self, root, user_name):
+        self.root = root
+        self.root.title("chat")
+        self.root.configure(bg=THEME["bg"])
+
+        # Container for canvas + scrollbar
+        self.top_container = Frame(self.root, bg=THEME["bg"])
+        self.top_container.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+
+        # Canvas + inner frame
+        self.canvas = tk.Canvas(self.top_container, bg=THEME["bg"], highlightthickness=0)
+        self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        self.scrollbar = tk.Scrollbar(self.top_container, orient="vertical", command=self.canvas.yview)
+        self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+
+        self.chat_frame = Frame(self.canvas, bg=THEME["bg"])
+        self.window_id = self.canvas.create_window((0, 0), window=self.chat_frame, anchor="nw")
+
+        # Bindings to keep width and scroll working correctly
+        self.chat_frame.bind("<Configure>", self._on_frame_configure)
+        self.canvas.bind("<Configure>", self._on_canvas_configure)
+        self._bind_mousewheel(self.canvas)
+
+        # Bottom input area
+        self.bottom_frame = Frame(self.root, bg=THEME["bg"])
+        self.bottom_frame.pack(side=tk.BOTTOM, fill=tk.X)
+
+        self.user_input = Entry(self.bottom_frame, font=FONTS["input"])
+        self.user_input.pack(side=tk.LEFT, padx=(6, 6), pady=6, fill=tk.X, expand=True)
+        self.user_input.bind("<Return>", self.on_send)
+
+        self.send_button = Button(self.bottom_frame, text="Send", font=FONTS["button"], command=self.on_send)
+        self.send_button.pack(side=tk.RIGHT, padx=6, pady=6)
+
+        # State
+        self.user_name = user_name
+        self.conversation_history = init_conversation(self.user_name)
+        self.typing_after_id = None
+        self.typing_visible = False
+
+        # Initial system greeting
+        self.add_message_bubble("System", f"Hello {self.user_name}, welcome to the chat!\nType 'exit' or 'quit' to leave.", role="system")
+
+    # ---- scrolling fixes ----
+    def _on_frame_configure(self, _event):
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        self.canvas.yview_moveto(1.0)  # keep autoscroll
+
+    def _on_canvas_configure(self, event):
+        # Match inner frame width to canvas width
+        self.canvas.itemconfig(self.window_id, width=event.width)
+
+    def _bind_mousewheel(self, widget):
+        # Windows and Linux
+        widget.bind_all("<MouseWheel>", self._on_mousewheel)
+        # macOS
+        widget.bind_all("<Button-4>", self._on_mousewheel)
+        widget.bind_all("<Button-5>", self._on_mousewheel)
+
+    def _on_mousewheel(self, event):
+        if event.num == 4:  # macOS up
+            self.canvas.yview_scroll(-1, "units")
+        elif event.num == 5:  # macOS down
+            self.canvas.yview_scroll(1, "units")
+        else:
+            self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+
+    # ---- message send flow ----
+    def on_send(self, event=None):
+        user_text = self.user_input.get().strip()
+        if not user_text:
+            return
+
+        self.user_input.delete(0, tk.END)
+        self.add_message_bubble(self.user_name, user_text, role="user")
+        play_system_sound(SOUNDS["send"])
+
+        if user_text.lower() in ["exit", "quit"]:
+            self.add_message_bubble("System", "Exiting the chat. Goodbye!", role="system")
+            self.root.after(800, self.root.destroy)
+            return
+
+        # Update conversation and start reply thread
+        self.conversation_history += f"<|start_header_id|>{self.user_name}<|end_header_id|>\n{user_text} <|eot_id|>\n"
+        threading.Thread(target=self._llm_reply_thread, daemon=True).start()
+
+    def _llm_reply_thread(self):
+        # Schedule showing a typing bubble after a small random delay.
+        delay_ms = random.randint(*TYPING_DELAY_RANGE)
+        self.typing_after_id = self.root.after(delay_ms, lambda: self._show_typing_bubble("James is writing..."))
+
+        # Run generation in this thread
+        response = generate_response(self.conversation_history)
+
+        # Cancel pending typing if not yet shown, remove if shown
+        def finalize_ui():
+            if self.typing_after_id is not None:
+                # If typing bubble was not shown yet, this cancels its appearance
+                try:
+                    self.root.after_cancel(self.typing_after_id)
+                except Exception:
+                    pass
+                self.typing_after_id = None
+            if self.typing_visible:
+                self._remove_typing_bubble()
+
+            # Append to history and render
+            self.conversation_history += f"<|start_header_id|>James<|end_header_id|>\n{response}\n<|eot_id|>\n"
+            self.conversation_history = self.conversation_history[-8000:]
+            self.add_message_bubble("James", response, role="bot")
+            play_system_sound(SOUNDS["recv"])
+
+        # Marshal UI ops back to main thread
+        self.root.after(0, finalize_ui)
+
+    # ---- typing bubble helpers ----
+    def _show_typing_bubble(self, text):
+        if self.typing_visible:
+            return
+        self.typing_visible = True
+        self._typing_frame = self._create_bubble(
+            name="James",
+            text=text,
+            role="typing"
+        )
+
+    def _remove_typing_bubble(self):
+        if hasattr(self, "_typing_frame") and self._typing_frame:
+            self._typing_frame.destroy()
+        self.typing_visible = False
+
+    # ---- drawing rounded bubbles on a Canvas ----
+    def _create_bubble(self, name, text, role="bot", ts=None):
+        """
+        Creates a rounded bubble composed of a Canvas with a rounded rect and two labels:
+        first line bold name, second line the message text.
+        """
+        outer = Frame(self.chat_frame, bg=THEME["bg"])
+        outer.pack(fill=tk.X, pady=4, padx=10)
+
+        # alignment
+        align = "e" if role == "user" else "w"
+
+        # colors
+        if role == "user":
+            bb = THEME["bubble_user_bg"]
+        elif role == "system":
+            bb = THEME["bubble_sys_bg"]
+        elif role == "typing":
+            bb = THEME["bubble_bot_bg"]
+        else:
+            bb = THEME["bubble_bot_bg"]
+
+        # Canvas-based bubble
+        c = Canvas(outer, bg=THEME["bg"], highlightthickness=0)
+        c.pack(anchor=align, padx=0)
+
+        # A frame inside canvas to hold labels
+        inner = Frame(c, bg=bb)
+        # Labels: name on first line (bold), text on second line
+        name_lbl = Label(inner, text=name, fg=THEME["name_color"], bg=bb, font=FONTS["name"], anchor="w", justify="left")
+        name_lbl.pack(anchor="w", padx=(THEME["pad_in"][0], THEME["pad_in"][0]), pady=(THEME["pad_in"][1], 0))
+
+        msg_font = FONTS["typing"] if role == "typing" else FONTS["text"]
+        msg_color = THEME["typing_color"] if role == "typing" else THEME["text_color"]
+        text_lbl = Label(
+            inner,
+            text=text,
+            fg=msg_color,
+            bg=bb,
+            font=msg_font,
+            wraplength=THEME["wrap"],
+            justify="left",
+            anchor="w"
+        )
+        text_lbl.pack(anchor="w", padx=(THEME["pad_in"][0], THEME["pad_in"][0]), pady=(2, THEME["pad_in"][1]))
+
+        if ts is None:
+            ts = datetime.now().strftime(TIME_FMT)
+        meta_row = Frame(inner, bg=bb)
+        meta_row.pack(anchor="e",
+                    fill="x",
+                    padx=(THEME["pad_in"][0], THEME["pad_in"][0]),
+                    pady=(0, THEME["pad_in"][1]))
+        ts_lbl = Label(meta_row, text=ts, fg=THEME["timestamp_color"],
+                    bg=bb, font=FONTS["timestamp"])
+        ts_lbl.pack(side="right")
+
+        # Materialize sizes to draw rounded rect behind
+        inner.update_idletasks()
+        w = inner.winfo_reqwidth()
+        h = inner.winfo_reqheight()
+
+        # pad outer
+        pad_x = 4
+        pad_y = 2
+
+        # Draw rounded rectangle
+        r = THEME["radius"]
+        x0, y0 = pad_x, pad_y
+        x1, y1 = x0 + w + 2*THEME["pad_in"][0] - THEME["pad_in"][0], y0 + h
+        # Use polygon with smooth=True to simulate rounded corners
+        points = [
+            x0+r, y0,
+            x1-r, y0,
+            x1, y0,
+            x1, y0+r,
+            x1, y1-r,
+            x1, y1,
+            x1-r, y1,
+            x0+r, y1,
+            x0, y1,
+            x0, y1-r,
+            x0, y0+r,
+            x0, y0
+        ]
+        c.create_polygon(points, smooth=True, splinesteps=20, fill=bb, outline=bb)
+
+        # Place inner frame inside canvas as a window
+        c.create_window(x0, y0, anchor="nw", window=inner)
+
+        # Resize canvas to fit content
+        c.configure(width=(x1 + pad_x), height=(y1 + pad_y))
+
+        # autoscroll
+        self.root.update_idletasks()
+        self.canvas.yview_moveto(1.0)
+
+        return outer
+
+    def add_message_bubble(self, sender, text, role="bot"):
+        """
+        role in {"user","bot","system"} controls colors and alignment.
+        """
+        ts = datetime.now().strftime(TIME_FMT)
+        self._create_bubble(sender, text, role=role, ts=ts)
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    root.withdraw()
+    user_name = simpledialog.askstring("User Name", "Please enter your name:")
+    if not user_name:
+        user_name = "User"
+    root.deiconify()
+    app = BubbleChatApp(root, user_name)
+    root.mainloop()

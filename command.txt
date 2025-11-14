@@ -1,0 +1,2 @@
+python3 /home/vaiu/.local/lib/python3.10/site-packages/transformers/models/llama/convert_llama_weights_to_hf.py \
+    --input_dir weights --model_size 70B --output_dir . --llama_version 3
