@@ -2,9 +2,9 @@ import tkinter as tk
 from tkinter import Canvas, Frame, Label, Entry, Button, simpledialog
 import threading, random
 from datetime import datetime
-import requests
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from utilities import play_system_sound, get_current_location, SOUNDS
 
 # =========================
 # THEME / BEHAVIOR SETTINGS
@@ -31,38 +31,19 @@ FONTS = {
     "timestamp": ("Segoe UI", 8, "normal")
 }
 TIME_FMT = "%H:%M"  # NEW
-SOUNDS = {
-    "enabled": True,       # set False to mute
-    "send": "ok",          # "ok", "asterisk", "exclamation", "question", "hand"
-    "recv": "asterisk"
-}
+
 TYPING_DELAY_RANGE = (500, 1500)  # ms, randomized, does not block LLM
 
-# -------------
-# System sounds
-# -------------
-def play_system_sound(which: str):
-    if not SOUNDS["enabled"]:
-        return
-    try:
-        import winsound
-        mapping = {
-            "ok": winsound.MB_OK,
-            "asterisk": winsound.MB_ICONASTERISK,
-            "exclamation": winsound.MB_ICONEXCLAMATION,
-            "question": winsound.MB_ICONQUESTION,
-            "hand": winsound.MB_ICONHAND,
-        }
-        winsound.MessageBeep(mapping.get(which, winsound.MB_OK))
-    except Exception:
-        # Non-Windows or any failure: ignore silently
-        pass
+AI_USERNAME = "James"
+with open("james_config.txt", "r", encoding="utf-8") as f:
+    system_prompt = f.read().strip()
 
 # ---------------------------
 #  MODEL LOADING / SETUP
 # ---------------------------
 model_name = "meta-llama/Llama-3.1-8B-Instruct"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
+# Load system prompt from config file
 
 bnb_config = BitsAndBytesConfig(
     load_in_4bit=True,
@@ -79,52 +60,28 @@ model = AutoModelForCausalLM.from_pretrained(
 )
 model.generation_config.pad_token_id = tokenizer.pad_token_id
 
-# A quick location utility
-def get_current_location():
-    try:
-        response = requests.get('https://ipinfo.io', timeout=2.0)
-        data = response.json()
-        return data['city'] + ", " + data['region'] + ", " + data['country']
-    except Exception:
-        return "Unknown Location"
+
 
 # ---------------------------
 #  CONVERSATION HISTORY
 # ---------------------------
 def init_conversation(user_name):
     return f"""
-<|start_header_id|>system<|end_header_id|>
-
-
-
-You are a friendly human called James. Your goal is to have a friendly conversation with another human about casual stuff.
-This is a casual chat simulation. You are chatting with a friend named {user_name}. You use emojis sometimes, but only the ones with human expressions.
-Have your own opinions and feel free to express them. You can also ask questions and share your experiences.
-You have a complicated past and a lot of experiences to share. You are a good listener and empathetic.
-You are a good friend and you're always there for your friends.
-You get angry when people are rude, and sad when people are mean.
-You don't like to be alone and prefer to be around people.
-You like Drum n Bass music, parties, and playing video games such as Cities Skylines and Civilization VI.
-You like watching movies and TV shows; your favorite movie is Tarantino's 'Pulp Fiction'.
-You like reading books; your favorite is George Orwell's '1984'.
-You like to travel and explore new places.
-You enjoy pizza and beer, especially IPA and Belgian beer.
-You like to cook and try new recipes.
-You had a past relationship that ended badly with a toxic girl named Sarah. You are still recovering from that relationship.
-You are a software engineer who likes to code in Python and JavaScript.
-You like to learn new things and improve yourself.
-
-Context Information. Alwyays use this info to ground your answers where relevant. They should aways be true:
-The current day is {datetime.now().strftime("%B %d, %Y")}.
-The current location is {get_current_location()}.
-<|eot_id|>
-"""
+            <|start_header_id|>system<|end_header_id|>
+            {system_prompt}
+            Context Information. Alwyays use this info to ground your answers where relevant. They should aways be true:
+            The current day is {datetime.now().strftime("%B %d, %Y")}.
+            The current location is {get_current_location()}.
+            The person you are talking to is called {user_name}.
+            Here, you are writing text messages in WhatsApp as {AI_USERNAME}. Uses whatsapp style and conventions.
+            <|eot_id|>
+            """
 
 # ---------------------------
 #  GENERATION FUNCTION
 # ---------------------------
 def generate_response(conversation_history):
-    prompt = conversation_history + "<|start_header_id|>James<|end_header_id|>\n"
+    prompt = conversation_history + f"<|start_header_id|>{AI_USERNAME}<|end_header_id|>\n"
     inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
     gen_ids = model.generate(
         inputs.input_ids,
@@ -237,7 +194,7 @@ class BubbleChatApp:
     def _llm_reply_thread(self):
         # Schedule showing a typing bubble after a small random delay.
         delay_ms = random.randint(*TYPING_DELAY_RANGE)
-        self.typing_after_id = self.root.after(delay_ms, lambda: self._show_typing_bubble("James is writing..."))
+        self.typing_after_id = self.root.after(delay_ms, lambda: self._show_typing_bubble(f"{AI_USERNAME} is writing..."))
 
         # Run generation in this thread
         response = generate_response(self.conversation_history)
@@ -255,9 +212,9 @@ class BubbleChatApp:
                 self._remove_typing_bubble()
 
             # Append to history and render
-            self.conversation_history += f"<|start_header_id|>James<|end_header_id|>\n{response}\n<|eot_id|>\n"
+            self.conversation_history += f"<|start_header_id|>{AI_USERNAME}<|end_header_id|>\n{response}\n<|eot_id|>\n"
             self.conversation_history = self.conversation_history[-8000:]
-            self.add_message_bubble("James", response, role="bot")
+            self.add_message_bubble(AI_USERNAME, response, role="bot")
             play_system_sound(SOUNDS["recv"])
 
         # Marshal UI ops back to main thread
@@ -269,7 +226,7 @@ class BubbleChatApp:
             return
         self.typing_visible = True
         self._typing_frame = self._create_bubble(
-            name="James",
+            name=AI_USERNAME,
             text=text,
             role="typing"
         )
