@@ -10,17 +10,30 @@ from utilities import play_system_sound, get_current_location, SOUNDS
 # THEME / BEHAVIOR SETTINGS
 # =========================
 THEME = {
-    "bg": "#ADA8A3",
-    "bubble_user_bg": "#CFF4B3",
-    "bubble_bot_bg": "#FFFFFF",
-    "bubble_sys_bg": "#F2F2F7",
-    "text_color": "#111111",
-    "name_color": "#0B5ED7",
-    "typing_color": "#6C757D",
-    "timestamp_color": "#6C757D",
+    "bg": "#111B21",
+    "bubble_user_bg": "#005C4B",
+    "bubble_bot_bg": "#1F2C34",
+    "bubble_sys_bg": "#182229",
+    "user_name_color": "#9EE9BB",
+    "assistant_name_color": "#8FD1FF",
+    "system_name_color": "#F4EBD0",
+    "user_text_color": "#E9F5EB",
+    "assistant_text_color": "#DDE6EA",
+    "system_text_color": "#F8F4E7",
+    "typing_color": "#8696A0",
+    "timestamp_color": "#8696A0",
     "wrap": 520,      # px wrap-length for message text
-    "radius": 15,     # bubble corner radius
-    "pad_in": (10, 8) # inner padding (x, y)
+    "radius": 22,     # bubble corner radius
+    "pad_in": (10, 4), # inner padding (x, y) - slimmer bubbles
+    "input_bar_bg": "#1F2C34",
+    "input_bg": "#0B141A",
+    "input_fg": "#E9F5EB",
+    "input_border": "#0B845E",
+    "button_bg": "#25D366",
+    "button_fg": "#052D1A",
+    "button_active_bg": "#1DA851",
+    "button_active_fg": "#FFFFFF",
+    "button_icon": "\u27A4"
 }
 FONTS = {
     "name": ("Segoe UI", 12, "bold"),
@@ -35,37 +48,37 @@ TIME_FMT = "%H:%M"  # NEW
 TYPING_DELAY_RANGE = (500, 1500)  # ms, randomized, does not block LLM
 
 AI_USERNAME = "James"
-with open("james_config.txt", "r", encoding="utf-8") as f:
-    system_prompt = f.read().strip()
 
-# ---------------------------
-#  MODEL LOADING / SETUP
-# ---------------------------
-model_name = "meta-llama/Llama-3.1-8B-Instruct"
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-# Load system prompt from config file
+def init_model(config_file):
+    with open(config_file, "r", encoding="utf-8") as f:
+        system_prompt = f.read().strip()
+    # ---------------------------
+    #  MODEL LOADING / SETUP
+    # ---------------------------
+    model_name = "meta-llama/Llama-3.1-8B-Instruct"
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    # Load system prompt from config file
 
-bnb_config = BitsAndBytesConfig(
-    load_in_4bit=True,
-    bnb_4bit_use_double_quant=True,
-    bnb_4bit_quant_type="nf4",
-    bnb_4bit_compute_dtype=torch.float16
-)
+    bnb_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_use_double_quant=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=torch.float16
+    )
 
-model = AutoModelForCausalLM.from_pretrained(
-    model_name,
-    torch_dtype=torch.float16,
-    quantization_config=bnb_config,
-    low_cpu_mem_usage=True
-)
-model.generation_config.pad_token_id = tokenizer.pad_token_id
-
-
+    model = AutoModelForCausalLM.from_pretrained(
+        model_name,
+        torch_dtype=torch.float16,
+        quantization_config=bnb_config,
+        low_cpu_mem_usage=True
+    )
+    model.generation_config.pad_token_id = tokenizer.pad_token_id
+    return model, tokenizer, system_prompt
 
 # ---------------------------
 #  CONVERSATION HISTORY
 # ---------------------------
-def init_conversation(user_name):
+def init_conversation(system_prompt,user_name):
     return f"""
             <|start_header_id|>system<|end_header_id|>
             {system_prompt}
@@ -103,10 +116,13 @@ def generate_response(conversation_history):
 #  BUBBLE CHAT UI (TKINTER) + ROUNDED BUBBLES
 # ===========================================
 class BubbleChatApp:
-    def __init__(self, root, user_name):
+    def __init__(self, root, user_name, system_prompt):
         self.root = root
         self.root.title("chat")
         self.root.configure(bg=THEME["bg"])
+        self.root.resizable(True, True)
+
+        self.system_prompt = system_prompt
 
         # Container for canvas + scrollbar
         self.top_container = Frame(self.root, bg=THEME["bg"])
@@ -122,6 +138,8 @@ class BubbleChatApp:
 
         self.chat_frame = Frame(self.canvas, bg=THEME["bg"])
         self.window_id = self.canvas.create_window((0, 0), window=self.chat_frame, anchor="nw")
+        self._bubble_registry = {}
+        self._current_wrap = THEME["wrap"]
 
         # Bindings to keep width and scroll working correctly
         self.chat_frame.bind("<Configure>", self._on_frame_configure)
@@ -129,21 +147,52 @@ class BubbleChatApp:
         self._bind_mousewheel(self.canvas)
 
         # Bottom input area
-        self.bottom_frame = Frame(self.root, bg=THEME["bg"])
+        self.bottom_frame = Frame(
+            self.root,
+            bg=THEME["input_bar_bg"],
+            highlightbackground=THEME["input_border"],
+            highlightthickness=1
+        )
         self.bottom_frame.pack(side=tk.BOTTOM, fill=tk.X)
 
-        self.user_input = Entry(self.bottom_frame, font=FONTS["input"])
+        self.user_input = Entry(
+            self.bottom_frame,
+            font=FONTS["input"],
+            bg=THEME["input_bg"],
+            fg=THEME["input_fg"],
+            insertbackground=THEME["input_fg"],
+            relief="flat",
+            bd=0,
+            highlightbackground=THEME["input_border"],
+            highlightcolor=THEME["input_border"],
+            highlightthickness=1
+        )
         self.user_input.pack(side=tk.LEFT, padx=(6, 6), pady=6, fill=tk.X, expand=True)
         self.user_input.bind("<Return>", self.on_send)
 
-        self.send_button = Button(self.bottom_frame, text="Send", font=FONTS["button"], command=self.on_send)
+        self.send_button = Button(
+            self.bottom_frame,
+            text=f"{THEME['button_icon']} Send",
+            font=FONTS["button"],
+            command=self.on_send,
+            bg=THEME["button_bg"],
+            fg=THEME["button_fg"],
+            activebackground=THEME["button_active_bg"],
+            activeforeground=THEME["button_active_fg"],
+            relief="flat",
+            bd=0,
+            cursor="hand2",
+            padx=16,
+            pady=8
+        )
         self.send_button.pack(side=tk.RIGHT, padx=6, pady=6)
 
         # State
         self.user_name = user_name
-        self.conversation_history = init_conversation(self.user_name)
+        self.conversation_history = init_conversation(self.system_prompt, self.user_name)
         self.typing_after_id = None
         self.typing_visible = False
+        self._typing_frame = None
 
         # Initial system greeting
         self.add_message_bubble("System", f"Hello {self.user_name}, welcome to the chat!\nType 'exit' or 'quit' to leave.", role="system")
@@ -156,6 +205,7 @@ class BubbleChatApp:
     def _on_canvas_configure(self, event):
         # Match inner frame width to canvas width
         self.canvas.itemconfig(self.window_id, width=event.width)
+        self._update_bubble_sizes(event.width)
 
     def _bind_mousewheel(self, widget):
         # Windows and Linux
@@ -171,6 +221,62 @@ class BubbleChatApp:
             self.canvas.yview_scroll(1, "units")
         else:
             self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+
+    def _compute_wrap_length(self, container_width=None):
+        width = container_width if container_width and container_width > 1 else self.canvas.winfo_width()
+        if width <= 1:
+            width = self.canvas.winfo_reqwidth()
+        if width and width > 1:
+            usable = max(240, width - 120)
+            return int(usable)
+        return THEME["wrap"]
+
+    def _rounded_rect_points(self, width, height, radius):
+        r = min(radius, width / 2, height / 2)
+        x0, y0 = 0, 0
+        x1, y1 = width, height
+        return [
+            x0 + r, y0,
+            x1 - r, y0,
+            x1, y0,
+            x1, y0 + r,
+            x1, y1 - r,
+            x1, y1,
+            x1 - r, y1,
+            x0 + r, y1,
+            x0, y1,
+            x0, y1 - r,
+            x0, y0 + r,
+            x0, y0,
+        ]
+
+    def _layout_single_bubble(self, meta, wraplength):
+        meta["text_label"].configure(wraplength=wraplength)
+        inner = meta["inner"]
+        inner.update_idletasks()
+        width = inner.winfo_reqwidth() + meta["pad_x"] * 2
+        height = inner.winfo_reqheight() + meta["pad_y"] * 2
+        points = self._rounded_rect_points(width, height, THEME["radius"])
+        canvas = meta["canvas"]
+        canvas.coords(meta["polygon"], *points)
+        canvas.configure(width=width, height=height)
+
+    def _update_bubble_sizes(self, container_width=None, force=False):
+        wraplength = self._compute_wrap_length(container_width)
+        if not force and wraplength == self._current_wrap:
+            return
+        self._current_wrap = wraplength
+        stale = []
+        for outer, meta in list(self._bubble_registry.items()):
+            if not meta["inner"].winfo_exists():
+                stale.append(outer)
+                continue
+            self._layout_single_bubble(meta, wraplength)
+        for outer in stale:
+            self._bubble_registry.pop(outer, None)
+
+    def _unregister_bubble(self, outer):
+        self._bubble_registry.pop(outer, None)
 
     # ---- message send flow ----
     def on_send(self, event=None):
@@ -232,8 +338,10 @@ class BubbleChatApp:
         )
 
     def _remove_typing_bubble(self):
-        if hasattr(self, "_typing_frame") and self._typing_frame:
+        if self._typing_frame:
             self._typing_frame.destroy()
+            self._unregister_bubble(self._typing_frame)
+            self._typing_frame = None
         self.typing_visible = False
 
     # ---- drawing rounded bubbles on a Canvas ----
@@ -243,7 +351,7 @@ class BubbleChatApp:
         first line bold name, second line the message text.
         """
         outer = Frame(self.chat_frame, bg=THEME["bg"])
-        outer.pack(fill=tk.X, pady=4, padx=10)
+        outer.pack(fill=tk.X, pady=3, padx=10)
 
         # alignment
         align = "e" if role == "user" else "w"
@@ -251,12 +359,20 @@ class BubbleChatApp:
         # colors
         if role == "user":
             bb = THEME["bubble_user_bg"]
+            name_color = THEME["user_name_color"]
+            msg_color = THEME["user_text_color"]
         elif role == "system":
             bb = THEME["bubble_sys_bg"]
+            name_color = THEME["system_name_color"]
+            msg_color = THEME["system_text_color"]
         elif role == "typing":
             bb = THEME["bubble_bot_bg"]
+            name_color = THEME["assistant_name_color"]
+            msg_color = THEME["assistant_text_color"]
         else:
             bb = THEME["bubble_bot_bg"]
+            name_color = THEME["assistant_name_color"]
+            msg_color = THEME["assistant_text_color"]
 
         # Canvas-based bubble
         c = Canvas(outer, bg=THEME["bg"], highlightthickness=0)
@@ -265,22 +381,23 @@ class BubbleChatApp:
         # A frame inside canvas to hold labels
         inner = Frame(c, bg=bb)
         # Labels: name on first line (bold), text on second line
-        name_lbl = Label(inner, text=name, fg=THEME["name_color"], bg=bb, font=FONTS["name"], anchor="w", justify="left")
+        name_lbl = Label(inner, text=name, fg=name_color, bg=bb, font=FONTS["name"], anchor="w", justify="left")
         name_lbl.pack(anchor="w", padx=(THEME["pad_in"][0], THEME["pad_in"][0]), pady=(THEME["pad_in"][1], 0))
 
         msg_font = FONTS["typing"] if role == "typing" else FONTS["text"]
-        msg_color = THEME["typing_color"] if role == "typing" else THEME["text_color"]
+        if role == "typing":
+            msg_color = THEME["typing_color"]
         text_lbl = Label(
             inner,
             text=text,
             fg=msg_color,
             bg=bb,
             font=msg_font,
-            wraplength=THEME["wrap"],
+            wraplength=self._current_wrap,
             justify="left",
             anchor="w"
         )
-        text_lbl.pack(anchor="w", padx=(THEME["pad_in"][0], THEME["pad_in"][0]), pady=(2, THEME["pad_in"][1]))
+        text_lbl.pack(anchor="w", padx=(THEME["pad_in"][0], THEME["pad_in"][0]), pady=(1, THEME["pad_in"][1]))
 
         if ts is None:
             ts = datetime.now().strftime(TIME_FMT)
@@ -295,39 +412,28 @@ class BubbleChatApp:
 
         # Materialize sizes to draw rounded rect behind
         inner.update_idletasks()
-        w = inner.winfo_reqwidth()
-        h = inner.winfo_reqheight()
-
-        # pad outer
-        pad_x = 4
-        pad_y = 2
-
-        # Draw rounded rectangle
-        r = THEME["radius"]
-        x0, y0 = pad_x, pad_y
-        x1, y1 = x0 + w + 2*THEME["pad_in"][0] - THEME["pad_in"][0], y0 + h
-        # Use polygon with smooth=True to simulate rounded corners
-        points = [
-            x0+r, y0,
-            x1-r, y0,
-            x1, y0,
-            x1, y0+r,
-            x1, y1-r,
-            x1, y1,
-            x1-r, y1,
-            x0+r, y1,
-            x0, y1,
-            x0, y1-r,
-            x0, y0+r,
-            x0, y0
-        ]
-        c.create_polygon(points, smooth=True, splinesteps=20, fill=bb, outline=bb)
+        pad_x = 3
+        pad_y = 1
+        width = inner.winfo_reqwidth() + pad_x * 2
+        height = inner.winfo_reqheight() + pad_y * 2
+        points = self._rounded_rect_points(width, height, THEME["radius"])
+        polygon_id = c.create_polygon(points, smooth=True, splinesteps=20, fill=bb, outline=bb)
 
         # Place inner frame inside canvas as a window
-        c.create_window(x0, y0, anchor="nw", window=inner)
+        c.create_window(pad_x, pad_y, anchor="nw", window=inner)
 
         # Resize canvas to fit content
-        c.configure(width=(x1 + pad_x), height=(y1 + pad_y))
+        c.configure(width=width, height=height)
+
+        self._bubble_registry[outer] = {
+            "canvas": c,
+            "inner": inner,
+            "text_label": text_lbl,
+            "polygon": polygon_id,
+            "pad_x": pad_x,
+            "pad_y": pad_y
+        }
+        self._update_bubble_sizes(force=True)
 
         # autoscroll
         self.root.update_idletasks()
@@ -343,11 +449,13 @@ class BubbleChatApp:
         self._create_bubble(sender, text, role=role, ts=ts)
 
 if __name__ == "__main__":
+    model, tokenizer, system_prompt = init_model("james_config.txt")
+
     root = tk.Tk()
     root.withdraw()
     user_name = simpledialog.askstring("User Name", "Please enter your name:")
     if not user_name:
         user_name = "User"
     root.deiconify()
-    app = BubbleChatApp(root, user_name)
+    app = BubbleChatApp(root, user_name, system_prompt)
     root.mainloop()
