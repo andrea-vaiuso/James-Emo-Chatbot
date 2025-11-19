@@ -3,8 +3,10 @@ from tkinter import Canvas, Frame, Label, Entry, Button, simpledialog
 import threading, random
 from datetime import datetime
 import torch
+from PIL import Image, ImageTk, ImageDraw
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
-from utilities import play_system_sound, get_current_location, SOUNDS
+from utilities import play_system_sound, SOUNDS
+from LLM.llm import LLMModel
 
 # =========================
 # THEME / BEHAVIOR SETTINGS
@@ -14,6 +16,7 @@ THEME = {
     "bubble_user_bg": "#005C4B",
     "bubble_bot_bg": "#1F2C34",
     "bubble_sys_bg": "#182229",
+    "header_height": 64,
     "user_name_color": "#9EE9BB",
     "assistant_name_color": "#8FD1FF",
     "system_name_color": "#F4EBD0",
@@ -37,6 +40,7 @@ THEME = {
 }
 FONTS = {
     "name": ("Segoe UI", 12, "bold"),
+    "header_name": ("Segoe UI", 14, "bold"),
     "text": ("Segoe UI", 12, "normal"),
     "input": ("Segoe UI", 12, "normal"),
     "button": ("Segoe UI", 12, "bold"),
@@ -45,84 +49,22 @@ FONTS = {
 }
 TIME_FMT = "%H:%M"  # NEW
 
-TYPING_DELAY_RANGE = (500, 1500)  # ms, randomized, does not block LLM
-
-AI_USERNAME = "James"
-
-def init_model(config_file):
-    with open(config_file, "r", encoding="utf-8") as f:
-        system_prompt = f.read().strip()
-    # ---------------------------
-    #  MODEL LOADING / SETUP
-    # ---------------------------
-    model_name = "meta-llama/Llama-3.1-8B-Instruct"
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    # Load system prompt from config file
-
-    bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_use_double_quant=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.float16
-    )
-
-    model = AutoModelForCausalLM.from_pretrained(
-        model_name,
-        torch_dtype=torch.float16,
-        quantization_config=bnb_config,
-        low_cpu_mem_usage=True
-    )
-    model.generation_config.pad_token_id = tokenizer.pad_token_id
-    return model, tokenizer, system_prompt
-
-# ---------------------------
-#  CONVERSATION HISTORY
-# ---------------------------
-def init_conversation(system_prompt,user_name):
-    return f"""
-            <|start_header_id|>system<|end_header_id|>
-            {system_prompt}
-            Context Information. Alwyays use this info to ground your answers where relevant. They should aways be true:
-            The current day is {datetime.now().strftime("%B %d, %Y")}.
-            The current location is {get_current_location()}.
-            The person you are talking to is called {user_name}.
-            Here, you are writing text messages in WhatsApp as {AI_USERNAME}. Uses whatsapp style and conventions.
-            <|eot_id|>
-            """
-
-# ---------------------------
-#  GENERATION FUNCTION
-# ---------------------------
-def generate_response(conversation_history):
-    prompt = conversation_history + f"<|start_header_id|>{AI_USERNAME}<|end_header_id|>\n"
-    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-    gen_ids = model.generate(
-        inputs.input_ids,
-        attention_mask=inputs.attention_mask,
-        max_new_tokens=300,
-        do_sample=True,
-        temperature=0.6,
-        top_k=50,
-        top_p=0.95,
-        no_repeat_ngram_size=2,
-        eos_token_id=tokenizer.eos_token_id,
-        pad_token_id=tokenizer.eos_token_id,
-    )
-    new_tokens = gen_ids[0, inputs.input_ids.shape[1]:]
-    response = tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
-    return response
+TYPING_DELAY_RANGE = (1500, 2500)  # ms, randomized, does not block LLM
 
 # ===========================================
 #  BUBBLE CHAT UI (TKINTER) + ROUNDED BUBBLES
 # ===========================================
 class BubbleChatApp:
-    def __init__(self, root, user_name, system_prompt):
+    def __init__(self, root: tk.Tk, user_name: str, ai_username: str, llm: LLMModel, max_history_length=8000):
+        self.llm_obj = llm
         self.root = root
         self.root.title("chat")
         self.root.configure(bg=THEME["bg"])
         self.root.resizable(True, True)
 
-        self.system_prompt = system_prompt
+        self.max_history_length = max_history_length
+
+        self._build_header(THEME["header_height"])
 
         # Container for canvas + scrollbar
         self.top_container = Frame(self.root, bg=THEME["bg"])
@@ -189,13 +131,14 @@ class BubbleChatApp:
 
         # State
         self.user_name = user_name
-        self.conversation_history = init_conversation(self.system_prompt, self.user_name)
+        self.ai_username = ai_username
+        self.conversation_history = self.llm_obj.init_conversation(self.user_name)
         self.typing_after_id = None
         self.typing_visible = False
         self._typing_frame = None
 
         # Initial system greeting
-        self.add_message_bubble("System", f"Hello {self.user_name}, welcome to the chat!\nType 'exit' or 'quit' to leave.", role="system")
+        self.add_message_bubble("System", f"Hello {self.user_name}, welcome to the chat with {self.ai_username}!\nType 'exit' or 'quit' to leave.", role="system")
 
     # ---- scrolling fixes ----
     def _on_frame_configure(self, _event):
@@ -295,15 +238,16 @@ class BubbleChatApp:
 
         # Update conversation and start reply thread
         self.conversation_history += f"<|start_header_id|>{self.user_name}<|end_header_id|>\n{user_text} <|eot_id|>\n"
+        self.llm_obj.memory_chunks.append(f"{self.user_name}: {user_text}\n")
         threading.Thread(target=self._llm_reply_thread, daemon=True).start()
 
     def _llm_reply_thread(self):
         # Schedule showing a typing bubble after a small random delay.
         delay_ms = random.randint(*TYPING_DELAY_RANGE)
-        self.typing_after_id = self.root.after(delay_ms, lambda: self._show_typing_bubble(f"{AI_USERNAME} is writing..."))
+        self.typing_after_id = self.root.after(delay_ms, lambda: self._show_typing_bubble(f"{self.llm_obj.ai_username} is writing..."))
 
         # Run generation in this thread
-        response = generate_response(self.conversation_history)
+        response = self.llm_obj.generate_response(self.conversation_history)
 
         # Cancel pending typing if not yet shown, remove if shown
         def finalize_ui():
@@ -318,9 +262,10 @@ class BubbleChatApp:
                 self._remove_typing_bubble()
 
             # Append to history and render
-            self.conversation_history += f"<|start_header_id|>{AI_USERNAME}<|end_header_id|>\n{response}\n<|eot_id|>\n"
-            self.conversation_history = self.conversation_history[-8000:]
-            self.add_message_bubble(AI_USERNAME, response, role="bot")
+            self.conversation_history += f"<|start_header_id|>{self.llm_obj.ai_username}<|end_header_id|>\n{response}\n<|eot_id|>\n"
+            self.llm_obj.memory_chunks.append(f"{self.llm_obj.ai_username}: {response}\n")
+            self.conversation_history = self.conversation_history[-self.max_history_length:]
+            self.add_message_bubble(self.llm_obj.ai_username, response, role="bot")
             play_system_sound(SOUNDS["recv"])
 
         # Marshal UI ops back to main thread
@@ -332,7 +277,7 @@ class BubbleChatApp:
             return
         self.typing_visible = True
         self._typing_frame = self._create_bubble(
-            name=AI_USERNAME,
+            name=self.llm_obj.ai_username,
             text=text,
             role="typing"
         )
@@ -448,14 +393,69 @@ class BubbleChatApp:
         ts = datetime.now().strftime(TIME_FMT)
         self._create_bubble(sender, text, role=role, ts=ts)
 
-if __name__ == "__main__":
-    model, tokenizer, system_prompt = init_model("james_config.txt")
+    def _build_header(self, header_height):
+        self.header_frame = Frame(
+            self.root,
+            bg=THEME["input_bar_bg"],
+            highlightbackground=THEME["input_border"],
+            highlightthickness=1,
+            height=header_height
+        )
+        self.header_frame.pack(side=tk.TOP, fill=tk.X)
 
+        self.ai_avatar_photo = self._load_ai_avatar_image()
+        avatar_kwargs = {
+            "bg": THEME["input_bar_bg"]
+        }
+        if self.ai_avatar_photo:
+            self.avatar_label = Label(self.header_frame, image=self.ai_avatar_photo, **avatar_kwargs)
+        else:
+            self.avatar_label = Label(
+                self.header_frame,
+                text=self.llm_obj.ai_username[:1],
+                fg=THEME["assistant_name_color"],
+                font=FONTS["name"],
+                width=2,
+                **avatar_kwargs
+            )
+        self.avatar_label.pack(side=tk.LEFT, padx=(12, 8), pady=8)
+
+        self.header_name_label = Label(
+            self.header_frame,
+            text=self.llm_obj.ai_username,
+            fg=THEME["assistant_name_color"],
+            bg=THEME["input_bar_bg"],
+            font=FONTS["header_name"]
+        )
+        self.header_name_label.pack(side=tk.LEFT, pady=8)
+
+    def _load_ai_avatar_image(self, size=52):
+        profile_path = getattr(self.llm_obj, "profile_picture_path", None)
+        if not profile_path:
+            return None
+        try:
+            image = Image.open(profile_path).convert("RGBA")
+        except Exception:
+            return None
+        image = image.resize((size, size), Image.LANCZOS)
+        mask = Image.new("L", (size, size), 0)
+        draw = ImageDraw.Draw(mask)
+        draw.ellipse((0, 0, size, size), fill=255)
+        image.putalpha(mask)
+        return ImageTk.PhotoImage(image)
+
+if __name__ == "__main__":
     root = tk.Tk()
     root.withdraw()
     user_name = simpledialog.askstring("User Name", "Please enter your name:")
     if not user_name:
         user_name = "User"
+    ai_username = "James"
     root.deiconify()
-    app = BubbleChatApp(root, user_name, system_prompt)
+    llm = LLMModel(ai_username=ai_username, 
+                   personality_prompt_file="Personalities/James/james.txt",
+                   profile_picture_path="Personalities/James/james.png",
+                   user_name=user_name)
+    app = BubbleChatApp(root, user_name, ai_username, llm)
     root.mainloop()
+    llm.memory_manager.generate_compressed_memory()
