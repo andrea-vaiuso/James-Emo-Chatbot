@@ -5,7 +5,6 @@ from LLM.emotions import EmotionalStateManager
 import json
 import hashlib
 
-
 def now():
     return datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -86,6 +85,13 @@ class MemoryManager:
         summary = self.tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
         return summary
     
+    def get_current_emotional_state(self):
+        return self.memory_database["current_affect_state"]
+    
+    def update_current_emotional_state(self, text: str):
+        emo_state = self.esm.analyze_emotional_state(text)
+        self.memory_database["current_affect_state"] = emo_state
+    
     def _update_short_term_emotional_state(self, text: str):
         emo_state = self.esm.analyze_emotional_state(text)
         self.memory_database["short_term_memory"]["affect_state"] = self.esm.update_affect_state(
@@ -116,11 +122,13 @@ class MemoryManager:
             "<|start_header_id|>system<|end_header_id|>\n"
             f"You are an AI language model tasked with compressing recent interactions into concise memory entries.\n"
             f"Summarize the recent interactions into a concise memory entry of maximum {max_new_tokens} tokens:\n"
+            f"For each memory entry, write explicitly your name '{self.ai_username}' and the user's name '{self.user_name}'. Do not confuse the roles\n"
+            f"Do not write anithing else than the memory entry.\n"
             "Session Messages:\n"
             f"{self.memory_chunks}"
             "<|eot_id|>"
             f"<|start_header_id|>{self.ai_username}<|end_header_id|>\n"
-            f"Compressed Memory Entry: "
+            f"{now()} - Compressed Memory Entry: "
         )
         print("Generating memories...")
         compressed_memory = self._generate_summary(prompt, max_new_tokens=max_new_tokens)
@@ -284,12 +292,16 @@ class MemoryManager:
 
         def intensity_phrase(v):
             """Map value → human intensity phrase."""
+            if v >= 0.9:
+                return "an overwhelming amount of"
             if v >= 0.7:
                 return "a lot of"
             if v >= 0.45:
                 return "quite a bit of"
             if v >= 0.2:
                 return "a bit of"
+            if v > 0.0:
+                return "a slight amount of"
             return None
 
         def clean_reasons(reasons, max_len=3):
@@ -359,8 +371,8 @@ class MemoryManager:
 
         intro = (
             "The following information describes the user's emotional state.\n"
-            "Use it only as subtle context, never as absolute psychological truth.\n"
-            "Avoid making definitive claims; interpret emotions gently.\n"
+            "Use it to express what you feel.\n"
+            "Interpret emotions as an human.\n"
         )
 
         return intro + "\n" + short_section + "\n" + long_section

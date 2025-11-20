@@ -135,7 +135,7 @@ class BubbleChatApp:
         # State
         self.user_name = user_name
         self.ai_username = ai_username
-        self.conversation_history = self.llm_obj.init_conversation(self.user_name)
+        self.conversation_history = self.llm_obj.init_conversation(self.user_name, verbose=True)
         self.typing_after_id = None
         self.typing_visible = False
         self._typing_frame = None

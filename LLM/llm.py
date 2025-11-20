@@ -56,7 +56,7 @@ class LLMModel:
     
     from datetime import datetime
 
-    def init_conversation(self, user_name) -> str:
+    def init_conversation(self, user_name, verbose=False) -> str:
         memory_db = self.memory_manager.memory_database
         meta = memory_db.get("meta", {})
 
@@ -108,11 +108,44 @@ class LLMModel:
             f"{context_block}\n"
             "<|eot_id|>"
         )
-
+        if verbose:
+            print( "=== CONVERSATION PROMPT ===")
+            print(prompt)
+            print( "===========================")
         return prompt
-
+    
+    def intensity_phrase(self,v):
+            """Map value → human intensity phrase."""
+            if v >= 0.9:
+                return "an overwhelming amount of"
+            if v >= 0.7:
+                return "a lot of"
+            if v >= 0.45:
+                return "quite a bit of"
+            if v >= 0.2:
+                return "a bit of"
+            if v > 0.0:
+                return "a slight amount of"
+            return None
     
     def generate_response(self, conversation_history):
+        current_emotional_state = self.memory_manager.get_current_emotional_state()
+        # Get the two higher emotions other than neutral and build emotional context
+        sorted_emotions = sorted(
+            current_emotional_state.items(),
+            key=lambda item: item[1]["value"],
+            reverse=True
+        )
+        top_emotions = [f"I feel {self.intensity_phrase(data['value'])} {emotion}" for emotion, data in sorted_emotions if data["value"] > 0.5][:2]
+        emotional_context = ". ".join(top_emotions) if top_emotions else None
+        if emotional_context is not None:
+            emotional_prompt = (
+                "<|start_header_id|>system<|end_header_id|>"
+                f"These are the emotions I am currently feeling: {emotional_context}.\n"
+                "<|eot_id|>"
+            )
+            conversation_history += emotional_prompt
+            print(f"Emotional Context: {emotional_context}")
         prompt = conversation_history + f"<|start_header_id|>{self.ai_username}<|end_header_id|>\n"
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.model.device)
         gen_ids = self.model.generate(
@@ -129,6 +162,7 @@ class LLMModel:
         )
         new_tokens = gen_ids[0, inputs.input_ids.shape[1]:]
         response = self.tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
+        self.memory_manager.update_current_emotional_state(response)
         return response
     
     def end_conversation(self):

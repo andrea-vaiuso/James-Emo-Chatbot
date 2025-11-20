@@ -168,3 +168,4 @@ class EmotionalStateManager:
             trend[emotion] = delta
 
         return new_vector, trend
+    

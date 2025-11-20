@@ -22,6 +22,20 @@
         "recent_activities": [] 
     },
 
+    "current_affect_state": {
+        "anger": {"value": 0.0},
+        "anticipation": {"value": 0.0},
+        "disgust": {"value": 0.0},
+        "fear": {"value": 0.0},
+        "joy": {"value": 0.5},
+        "love": {"value": 0.0},
+        "optimism": {"value": 0.3},
+        "pessimism": {"value": 0.0},
+        "sadness": {"value": 0.0},
+        "surprise": {"value": 0.2},
+        "trust": {"value": 0.5}
+    },
+
     "short_term_memory": {
         "recent_summaries": [
             {
