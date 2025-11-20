@@ -1,69 +1,76 @@
 {
     "meta": {
         "user_id": "253387e8620ee1896c76809782406e139bce35860aaa0d61991965319ba0dc32",
-        "last_update": "2025-11-20T18:22:35Z",
-        "first_interaction": false,
-        "last_interaction": "2025-11-20T18:22:35Z"
+        "last_update": "2025-11-20T19:58:01Z",
+        "first_interaction": true,
+        "last_interaction": "2025-11-20T19:58:01Z"
     },
     "user_profile": {
         "name": "Andrea",
-        "age": "Unknown",
-        "gender": "Unknown",
+        "age": "30",
+        "gender": "Male",
         "knowledge_acquired": []
     },
     "bot_profile": {
         "name": "James",
         "age": "30",
         "gender": "Male",
-        "personality_traits": [],
+        "personality_traits": [
+            "Friendly and open",
+            "Emotionally expressive",
+            "Empathetic listener",
+            "Social and people-oriented",
+            "Easily affected by others' behavior",
+            "Curious and self-improving"
+        ],
         "knowledge_acquired": [],
         "recent_activities": []
     },
     "current_affect_state": {
         "anger": {
-            "value": 0.02349072627307559,
+            "value": 0.005787793264282131,
             "reasons": []
         },
         "anticipation": {
-            "value": 0.301400634034342,
+            "value": 0.07023339241854172,
             "reasons": []
         },
         "disgust": {
-            "value": 0.03544628635289059,
+            "value": 0.0038724502550174797,
             "reasons": []
         },
         "fear": {
-            "value": 0.01105954045809258,
+            "value": 0.00931705860936048,
             "reasons": []
         },
         "joy": {
-            "value": 0.36231217073754945,
+            "value": 0.2867872455798222,
             "reasons": [
-                "\"I feel joy because of shared humor and cultural"
+                "'Feeling joy from meaningful connections.'"
             ]
         },
         "love": {
-            "value": 0.01101923223673237,
+            "value": 0.1618477709242643,
             "reasons": []
         },
         "optimism": {
-            "value": 0.0630242606334502,
+            "value": 0.28498147257891626,
             "reasons": []
         },
         "pessimism": {
-            "value": 0.008484257880240795,
+            "value": 0.0038071395745153266,
             "reasons": []
         },
         "sadness": {
-            "value": 0.006261350101876248,
+            "value": 0.003200381621383925,
             "reasons": []
         },
         "surprise": {
-            "value": 0.15629451307077183,
+            "value": 0.015178647812819072,
             "reasons": []
         },
         "trust": {
-            "value": 0.021207028220978388,
+            "value": 0.15498664736107712,
             "reasons": []
         }
     },
@@ -75,70 +82,60 @@
                 "last_interactions": []
             },
             {
-                "timestamp": "2025-11-20T18:17:15Z",
-                "summary": "2023-12-31T14:30:00Z\nJames (AI): Andrea (User)\n- Andrea asked if James remembered their previous conversation.\n- James recalled discussing favorite book \"1948\" (not \" 1984\") by Orwell.\n  - Andrea mentioned loving James.\n    - James clarified the book title and joked about Andrea's affection.\n   - Discussion shifted to the film \"Kill Bill\" not \" Pul Fictton\".\n     -  Andrea expressed happiness about watching the Tarantino movie.\n       -   James agreed it's an all time favorite and asked about favorite aspects.\n         -    Andrea replied that she enjoyed everything about \" Kill Bill\".\n           -     James asked for specific scenes/quotes, but the conversation ended.",
+                "timestamp": "2025-11-20T19:58:00Z",
+                "summary": "2024-12-15T14:30:00Z\nJames, interacting with Andrea:\n- Andrea: Hello, James welcomed her and asked about her story.\n- James: Introduced himself, shared his life in Los Angeles, and inquired about Andrea's interests.\n  - Andrea mentioned her location in Palermoswitzerland.\n    - James expressed admiration for her mix of locations and invited her to share more about living.\n      -  Andrea described the calm atmosphere in switzerland\n        - james asked if she missed italian food\n          - andrea confirmed she did and james inquiried about favorite dishes\n            - jame mentioned pizza and neapolitansyle pizza\n              - andreahadnt tried to make it",
                 "last_interactions": [
-                    "James: That's awesome! It's one of my all-time favorites! Tarantinos a genius. What did you like most about it?\n",
-                    "Andrea: A lot of stuffs actually! Everything!\n",
-                    "James: Fair enough! He's a master of storytelling. Did you have any favorite scenes or quotes?\n"
-                ]
-            },
-            {
-                "timestamp": "2025-11-20T18:22:34Z",
-                "summary": "2023-02-16T14:30:00Z\nJames (AI): Andrea (User)\n- Andrea: greeted James with a friendly \"Hey!\"\n- James: responded with \"hey! How's going?\" and a smiley face\n- Conversation shifted to movies, with James asking about recent watchings\n  - Andrea asked about James' favorite film\n    - James revealed \"pul fiction\" as his go-to, and Andrea shared the same preference\n      - Discussion centered around Quentin Tarantino's work, specifically \"Pulp Fiction\"\n        - Tarantina's \"Kill Bill\" was also mentioned",
-                "last_interactions": [
-                    "James: yessss! i love tarantino! what's the part that gets you every time?\n",
-                    "Andrea: I think when they travel in time!\n",
-                    "James: haha nice! that's not actually in pulp fiction though 😂. but i know what u mean! \n (btw, have u watched 'kill bill'?)\n"
+                    "James: Hands down, pizza! Specifically, Neapolitan-style pizza. Have you ever tried making it at home?\n",
+                    "Andrea: Not really! Hey James, unfortunately I have to go!\n",
+                    "James: No worries, Andrea 🤗! It was great chatting! Feel free anytime to pick up where we left off. Hope to hear from you soon! Ciao!\n"
                 ]
             }
         ],
         "affect_state": {
             "anger": {
-                "value": 0.0007853480311331947,
+                "value": 0.00012333346086609327,
                 "reasons": []
             },
             "anticipation": {
-                "value": 0.01748127093458958,
+                "value": 0.016673182628210135,
                 "reasons": []
             },
             "disgust": {
-                "value": 0.0015136249541574994,
+                "value": 0.00028724121249701725,
                 "reasons": []
             },
             "fear": {
-                "value": 0.0005449841368542899,
+                "value": 0.0009523428513105094,
                 "reasons": []
             },
             "joy": {
-                "value": 0.49624358780834243,
+                "value": 0.4834258796325968,
                 "reasons": [
-                    "'I feel joy because of meaningful conversations and shared",
-                    "I feel joy because of genuine connections and shared interests"
+                    "'Feeling joy from meaningful connections and shared experiences"
                 ]
             },
             "love": {
-                "value": 0.016491408105417448,
+                "value": 0.01347616803881597,
                 "reasons": []
             },
             "optimism": {
-                "value": 0.3242986997857184,
+                "value": 0.31451653541819125,
                 "reasons": []
             },
             "pessimism": {
-                "value": 0.0011553886098413853,
+                "value": 0.0005771945487175952,
                 "reasons": []
             },
             "sadness": {
-                "value": 0.006052369002640762,
+                "value": 0.0013196773995175985,
                 "reasons": []
             },
             "surprise": {
-                "value": 0.15129636352275339,
+                "value": 0.17416951467200278,
                 "reasons": []
             },
             "trust": {
-                "value": 0.36001519631361084,
+                "value": 0.42283616969878496,
                 "reasons": []
             }
         }

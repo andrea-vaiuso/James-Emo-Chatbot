@@ -12,9 +12,13 @@ class LLMModel:
     def __init__(self, ai_username, personality_prompt_file, profile_picture_path=None,
                  model_name="meta-llama/Llama-3.1-8B-Instruct",
                  memory_location="Memory",
-                 user_name="User"):
+                 user_name="User",
+                 user_age=None,
+                 user_gender=None):
         self.ai_username = ai_username
         self.user_name = user_name
+        self.user_age = user_age
+        self.user_gender = user_gender
         self.personality_prompt_file = personality_prompt_file
         with open(personality_prompt_file, "r", encoding="utf-8") as f:
             self.ai_personality_prompt = f.read().strip()
@@ -24,7 +28,9 @@ class LLMModel:
                                             user_name=user_name, 
                                             llm_model=self.model, 
                                             tokenizer=self.tokenizer,
-                                            memory_template=self.load_memory_template())
+                                            memory_template=self.load_memory_template(),
+                                            user_age=user_age,
+                                            user_gender=user_gender)
         self.profile_picture_path = profile_picture_path
 
     def load_memory_template(self):
@@ -69,13 +75,14 @@ class LLMModel:
 
         # --- First interaction vs previous interactions ---
         last_interaction = meta.get("last_interaction", None)
-        is_first_interaction = last_interaction in (None, "Unknown")
+        is_first_interaction = bool(meta.get("first_interaction", False)) or last_interaction in (None, "Unknown", "")
 
         if is_first_interaction:
             relationship_instruction = (
                 f"This is your first conversation with {user_name}. "
-                "Warmly welcome them, ask a few simple questions to get to know them, "
-                "and build rapport in a natural way.\n"
+                "You do not know them yet, so introduce yourself clearly, explain this is your first time chatting, "
+                "and ask a few simple questions to get to know them. "
+                "Build rapport in a natural, warm way.\n"
             )
         else:
             relationship_instruction = (

@@ -80,8 +80,8 @@ class EmotionalStateManager:
             top_k=50,
             top_p=0.95,
             no_repeat_ngram_size=2,
-            eos_token_id=self.tokenizer.eos_token_id,
-            pad_token_id=self.tokenizer.eos_token_id,
+            eos_token_id=self.reason_sumup_tokenizer.eos_token_id,
+            pad_token_id=self.reason_sumup_tokenizer.eos_token_id,
             )
         new_tokens = gen_ids[0, inputs.input_ids.shape[1]:]
         summary = self.reason_sumup_tokenizer.decode(new_tokens, skip_special_tokens=True).strip()

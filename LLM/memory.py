@@ -1,6 +1,7 @@
 from datetime import datetime
 import os
 from transformers import AutoTokenizer, PreTrainedModel, PreTrainedTokenizer, pipeline
+from typing import Optional
 from LLM.emotions import EmotionalStateManager
 import json
 import hashlib
@@ -15,10 +16,14 @@ class MemoryManager:
     def __init__(self, memory_location, ai_username, user_name, 
                  llm_model: PreTrainedModel=None, tokenizer: PreTrainedTokenizer=None,
                  memory_template: dict=None,
+                 user_age: Optional[str] = None,
+                 user_gender: Optional[str] = None,
                  max_short_term_memory_entries=20):
         
         self.ai_username = ai_username
         self.user_name = user_name
+        self.user_age = user_age
+        self.user_gender = user_gender
 
         self.memory_chunks = [] # Contains the current session's text messages chunks
         self.llm_model = llm_model
@@ -34,14 +39,25 @@ class MemoryManager:
                 self.memory_database["meta"]["user_id"] = generate_user_id(user_name)
                 self.memory_database["meta"]["last_update"] = now()
                 self.memory_database["meta"]["first_interaction"] = True
-                self.memory_database["meta"]["last_interaction"] = now()
+                # Mark as unknown so first prompt knows this is the first time
+                self.memory_database["meta"]["last_interaction"] = "Unknown"
                 self.memory_database["bot_profile"]["name"] = ai_username
                 self.memory_database["user_profile"]["name"] = user_name
+                if self.user_age:
+                    self.memory_database["user_profile"]["age"] = str(self.user_age)
+                if self.user_gender:
+                    self.memory_database["user_profile"]["gender"] = str(self.user_gender)
                 json.dump(self.memory_database, f)
         else:
             with open(self.memory_path, "r", encoding="utf-8") as f:
                 self.memory_database = json.load(f)
                 self.memory_database["meta"]["first_interaction"] = False
+                if self.user_age and self.memory_database["user_profile"].get("age") in (None, "", "Unknown"):
+                    self.memory_database["user_profile"]["age"] = str(self.user_age)
+                    self._dump_memory_database()
+                if self.user_gender and self.memory_database["user_profile"].get("gender") in (None, "", "Unknown", "Not specified"):
+                    self.memory_database["user_profile"]["gender"] = str(self.user_gender)
+                    self._dump_memory_database()
         
         if "short_term_memory" not in self.memory_database:
             self.memory_database["short_term_memory"] = {
@@ -118,9 +134,11 @@ class MemoryManager:
         )[0]
         
     def _generate_short_term_memory_chunk(self, max_new_tokens=200, append_n_messages=3):
+        if self.memory_chunks == []:
+            return
         prompt = (
             "<|start_header_id|>system<|end_header_id|>\n"
-            f"You are an AI language model tasked with compressing recent interactions into concise memory entries.\n"
+            f"You are human called {self.ai_username} tasked with compressing recent interactions into concise memory entries.\n"
             f"Summarize the recent interactions into a concise memory entry of maximum {max_new_tokens} tokens:\n"
             f"For each memory entry, write explicitly your name '{self.ai_username}' and the user's name '{self.user_name}'. Do not confuse the roles\n"
             f"Do not write anithing else than the memory entry.\n"
@@ -152,7 +170,7 @@ class MemoryManager:
     def _generate_long_term_memory_fact(self, max_new_tokens=300):
         prompt = (
             "<|start_header_id|>system<|end_header_id|>\n"
-            f"You are an AI language model tasked with extracting significant facts from recent interactions.\n"
+            f"You are an human called {self.ai_username} tasked with extracting significant facts from recent interactions.\n"
             f"Identify and summarize any significant facts or events from the recent interactions into a concise memory fact of maximum {max_new_tokens} tokens:\n"
             f"If there are no significant facts, respond with 'no significant interactions'\n"
             "Recent summaries:\n"
@@ -202,7 +220,7 @@ class MemoryManager:
         Generate user informational prompt based on user profile.
         """
         user_profile = self.memory_database["user_profile"]
-        user_gender = user_profile["gender"]
+        user_gender = user_profile.get("gender", "Not specified")
         if user_gender.lower().startswith("m"):
             pronoun = "he/him"
         elif user_gender.lower().startswith("f"):
@@ -238,8 +256,12 @@ class MemoryManager:
         Generate timing information prompt based on last interaction.
         The generated prompt should inform the LLM about how much time has passed since the last interaction in days/hours/minutes.
         """
-        last_interaction_str = self.memory_database["meta"].get("last_interaction", None)
-        if last_interaction_str is None:
+        meta = self.memory_database.get("meta", {})
+        if meta.get("first_interaction", False):
+            return "Timing Information: This is your very first conversation with the user; you have no prior interactions.\n"
+
+        last_interaction_str = meta.get("last_interaction", None)
+        if last_interaction_str in (None, "", "Unknown"):
             return ""
         last_interaction = datetime.strptime(last_interaction_str, "%Y-%m-%dT%H:%M:%SZ")
         now_dt = datetime.utcnow()
