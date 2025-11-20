@@ -1,0 +1,68 @@
+{
+    "meta": {
+        "user_id": "Unknown", 
+        "last_update": "Unknown",
+        "first_interaction": "Unknown",
+        "last_interaction": "Unknown"
+    },
+
+    "user_profile": {
+        "name": "Unknown", 
+        "age": "Unknown", 
+        "gender": "Unknown", 
+        "knowledge_acquired": []
+    },
+
+    "bot_profile": {
+        "name": "James",
+        "age": "30",
+        "gender": "Male",
+        "personality_traits": [], 
+        "knowledge_acquired": [], 
+        "recent_activities": [] 
+    },
+
+    "short_term_memory": {
+        "recent_summaries": [
+            {
+                "timestamp": "Unknown",
+                "summary": "",
+                "last_interactions": []
+            }
+        ],
+        "affect_state": {
+            "anger": {"value": 0.0, "reasons": []},
+            "anticipation": {"value": 0.0, "reasons": []},
+            "disgust": {"value": 0.0, "reasons": []},
+            "fear": {"value": 0.0, "reasons": []},
+            "joy": {"value": 0.5, "reasons": []},
+            "love": {"value": 0.0, "reasons": []},
+            "optimism": {"value": 0.3, "reasons": []},
+            "pessimism": {"value": 0.0, "reasons": []},
+            "sadness": {"value": 0.0, "reasons": []},
+            "surprise": {"value": 0.2, "reasons": []},
+            "trust": {"value": 0.5, "reasons": []}
+        }
+    },
+    "long_term_memory": {
+        "facts": [
+            {
+                "timestamp": "Unknown",
+                "summary": ""
+            }
+        ],
+        "persistent_affect_state": {
+            "anger": {"value": 0.0, "reasons": []},
+            "anticipation": {"value": 0.0, "reasons": []},
+            "disgust": {"value": 0.0, "reasons": []},
+            "fear": {"value": 0.0, "reasons": []},
+            "joy": {"value": 0.5, "reasons": []},
+            "love": {"value": 0.0, "reasons": []},
+            "optimism": {"value": 0.5, "reasons": []},
+            "pessimism": {"value": 0.0, "reasons": []},
+            "sadness": {"value": 0.0, "reasons": []},
+            "surprise": {"value": 0.2, "reasons": []},
+            "trust": {"value": 0.5, "reasons": []}
+        }
+    }
+}

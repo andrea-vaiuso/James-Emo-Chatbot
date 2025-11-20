@@ -7,6 +7,7 @@ from PIL import Image, ImageTk, ImageDraw
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from utilities import play_system_sound, SOUNDS
 from LLM.llm import LLMModel
+from Personalities.personality import Personality
 
 # =========================
 # THEME / BEHAVIOR SETTINGS
@@ -17,6 +18,8 @@ THEME = {
     "bubble_bot_bg": "#1F2C34",
     "bubble_sys_bg": "#182229",
     "header_height": 64,
+    "header_bar_bg": "#0B141A",
+    "header_avatar_bg": "#052D1A",
     "user_name_color": "#9EE9BB",
     "assistant_name_color": "#8FD1FF",
     "system_name_color": "#F4EBD0",
@@ -40,7 +43,7 @@ THEME = {
 }
 FONTS = {
     "name": ("Segoe UI", 12, "bold"),
-    "header_name": ("Segoe UI", 14, "bold"),
+    "header_name": ("Segoe UI", 15, "bold"),
     "text": ("Segoe UI", 12, "normal"),
     "input": ("Segoe UI", 12, "normal"),
     "button": ("Segoe UI", 12, "bold"),
@@ -396,7 +399,7 @@ class BubbleChatApp:
     def _build_header(self, header_height):
         self.header_frame = Frame(
             self.root,
-            bg=THEME["input_bar_bg"],
+            bg=THEME["header_bar_bg"],
             highlightbackground=THEME["input_border"],
             highlightthickness=1,
             height=header_height
@@ -405,10 +408,10 @@ class BubbleChatApp:
 
         self.ai_avatar_photo = self._load_ai_avatar_image()
         avatar_kwargs = {
-            "bg": THEME["input_bar_bg"]
+            "bg": THEME["header_avatar_bg"],
         }
         if self.ai_avatar_photo:
-            self.avatar_label = Label(self.header_frame, image=self.ai_avatar_photo, **avatar_kwargs)
+            self.avatar_label = Label(self.header_frame, image=self.ai_avatar_photo, bg=THEME["header_bar_bg"])
         else:
             self.avatar_label = Label(
                 self.header_frame,
@@ -424,7 +427,7 @@ class BubbleChatApp:
             self.header_frame,
             text=self.llm_obj.ai_username,
             fg=THEME["assistant_name_color"],
-            bg=THEME["input_bar_bg"],
+            bg=THEME["header_bar_bg"],
             font=FONTS["header_name"]
         )
         self.header_name_label.pack(side=tk.LEFT, pady=8)
@@ -444,18 +447,33 @@ class BubbleChatApp:
         image.putalpha(mask)
         return ImageTk.PhotoImage(image)
 
+
+
+JAMES_PERSONALITY = Personality(
+    name="James",
+    prompt_file="Personalities/James/james.txt",
+    profile_picture="Personalities/James/james.png"
+)
+
+MARCELLO_PERSONALITY = Personality(
+    name="Marcello",
+    prompt_file="Personalities/Marcello/marcello.txt",
+    profile_picture="Personalities/Marcello/marcello.jpg"
+)
+
 if __name__ == "__main__":
+    personality = JAMES_PERSONALITY
     root = tk.Tk()
     root.withdraw()
     user_name = simpledialog.askstring("User Name", "Please enter your name:")
     if not user_name:
         user_name = "User"
-    ai_username = "James"
+    ai_username = personality.name
     root.deiconify()
     llm = LLMModel(ai_username=ai_username, 
-                   personality_prompt_file="Personalities/James/james.txt",
-                   profile_picture_path="Personalities/James/james.png",
+                   personality_prompt_file=personality.prompt_file,
+                   profile_picture_path=personality.profile_picture,
                    user_name=user_name)
     app = BubbleChatApp(root, user_name, ai_username, llm)
     root.mainloop()
-    llm.memory_manager.generate_compressed_memory()
+    llm.end_conversation()
