@@ -72,7 +72,17 @@ class EmotionalStateManager:
             f"Summary: "
         )
         inputs = self.reason_sumup_tokenizer(prompt, return_tensors="pt").to(self.reason_sumup_model.device)
-        gen_ids = self.reason_sumup_model.generate(inputs.input_ids, max_new_tokens=max_new_tokens)
+        gen_ids = self.reason_sumup_model.generate(inputs.input_ids, 
+            max_new_tokens=max_new_tokens,
+            attention_mask=inputs.attention_mask,
+            do_sample=True,
+            temperature=0.2,
+            top_k=50,
+            top_p=0.95,
+            no_repeat_ngram_size=2,
+            eos_token_id=self.tokenizer.eos_token_id,
+            pad_token_id=self.tokenizer.eos_token_id,
+            )
         new_tokens = gen_ids[0, inputs.input_ids.shape[1]:]
         summary = self.reason_sumup_tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
         return summary

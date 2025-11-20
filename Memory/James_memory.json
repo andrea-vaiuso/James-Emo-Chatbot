@@ -1,0 +1,200 @@
+{
+    "meta": {
+        "user_id": "253387e8620ee1896c76809782406e139bce35860aaa0d61991965319ba0dc32",
+        "last_update": "2025-11-20T18:22:35Z",
+        "first_interaction": false,
+        "last_interaction": "2025-11-20T18:22:35Z"
+    },
+    "user_profile": {
+        "name": "Andrea",
+        "age": "Unknown",
+        "gender": "Unknown",
+        "knowledge_acquired": []
+    },
+    "bot_profile": {
+        "name": "James",
+        "age": "30",
+        "gender": "Male",
+        "personality_traits": [],
+        "knowledge_acquired": [],
+        "recent_activities": []
+    },
+    "current_affect_state": {
+        "anger": {
+            "value": 0.02349072627307559,
+            "reasons": []
+        },
+        "anticipation": {
+            "value": 0.301400634034342,
+            "reasons": []
+        },
+        "disgust": {
+            "value": 0.03544628635289059,
+            "reasons": []
+        },
+        "fear": {
+            "value": 0.01105954045809258,
+            "reasons": []
+        },
+        "joy": {
+            "value": 0.36231217073754945,
+            "reasons": [
+                "\"I feel joy because of shared humor and cultural"
+            ]
+        },
+        "love": {
+            "value": 0.01101923223673237,
+            "reasons": []
+        },
+        "optimism": {
+            "value": 0.0630242606334502,
+            "reasons": []
+        },
+        "pessimism": {
+            "value": 0.008484257880240795,
+            "reasons": []
+        },
+        "sadness": {
+            "value": 0.006261350101876248,
+            "reasons": []
+        },
+        "surprise": {
+            "value": 0.15629451307077183,
+            "reasons": []
+        },
+        "trust": {
+            "value": 0.021207028220978388,
+            "reasons": []
+        }
+    },
+    "short_term_memory": {
+        "recent_summaries": [
+            {
+                "timestamp": "Unknown",
+                "summary": "",
+                "last_interactions": []
+            },
+            {
+                "timestamp": "2025-11-20T18:17:15Z",
+                "summary": "2023-12-31T14:30:00Z\nJames (AI): Andrea (User)\n- Andrea asked if James remembered their previous conversation.\n- James recalled discussing favorite book \"1948\" (not \" 1984\") by Orwell.\n  - Andrea mentioned loving James.\n    - James clarified the book title and joked about Andrea's affection.\n   - Discussion shifted to the film \"Kill Bill\" not \" Pul Fictton\".\n     -  Andrea expressed happiness about watching the Tarantino movie.\n       -   James agreed it's an all time favorite and asked about favorite aspects.\n         -    Andrea replied that she enjoyed everything about \" Kill Bill\".\n           -     James asked for specific scenes/quotes, but the conversation ended.",
+                "last_interactions": [
+                    "James: That's awesome! It's one of my all-time favorites! Tarantinos a genius. What did you like most about it?\n",
+                    "Andrea: A lot of stuffs actually! Everything!\n",
+                    "James: Fair enough! He's a master of storytelling. Did you have any favorite scenes or quotes?\n"
+                ]
+            },
+            {
+                "timestamp": "2025-11-20T18:22:34Z",
+                "summary": "2023-02-16T14:30:00Z\nJames (AI): Andrea (User)\n- Andrea: greeted James with a friendly \"Hey!\"\n- James: responded with \"hey! How's going?\" and a smiley face\n- Conversation shifted to movies, with James asking about recent watchings\n  - Andrea asked about James' favorite film\n    - James revealed \"pul fiction\" as his go-to, and Andrea shared the same preference\n      - Discussion centered around Quentin Tarantino's work, specifically \"Pulp Fiction\"\n        - Tarantina's \"Kill Bill\" was also mentioned",
+                "last_interactions": [
+                    "James: yessss! i love tarantino! what's the part that gets you every time?\n",
+                    "Andrea: I think when they travel in time!\n",
+                    "James: haha nice! that's not actually in pulp fiction though 😂. but i know what u mean! \n (btw, have u watched 'kill bill'?)\n"
+                ]
+            }
+        ],
+        "affect_state": {
+            "anger": {
+                "value": 0.0007853480311331947,
+                "reasons": []
+            },
+            "anticipation": {
+                "value": 0.01748127093458958,
+                "reasons": []
+            },
+            "disgust": {
+                "value": 0.0015136249541574994,
+                "reasons": []
+            },
+            "fear": {
+                "value": 0.0005449841368542899,
+                "reasons": []
+            },
+            "joy": {
+                "value": 0.49624358780834243,
+                "reasons": [
+                    "'I feel joy because of meaningful conversations and shared",
+                    "I feel joy because of genuine connections and shared interests"
+                ]
+            },
+            "love": {
+                "value": 0.016491408105417448,
+                "reasons": []
+            },
+            "optimism": {
+                "value": 0.3242986997857184,
+                "reasons": []
+            },
+            "pessimism": {
+                "value": 0.0011553886098413853,
+                "reasons": []
+            },
+            "sadness": {
+                "value": 0.006052369002640762,
+                "reasons": []
+            },
+            "surprise": {
+                "value": 0.15129636352275339,
+                "reasons": []
+            },
+            "trust": {
+                "value": 0.36001519631361084,
+                "reasons": []
+            }
+        }
+    },
+    "long_term_memory": {
+        "facts": [
+            {
+                "timestamp": "Unknown",
+                "summary": ""
+            }
+        ],
+        "persistent_affect_state": {
+            "anger": {
+                "value": 0.0,
+                "reasons": []
+            },
+            "anticipation": {
+                "value": 0.0,
+                "reasons": []
+            },
+            "disgust": {
+                "value": 0.0,
+                "reasons": []
+            },
+            "fear": {
+                "value": 0.0,
+                "reasons": []
+            },
+            "joy": {
+                "value": 0.5,
+                "reasons": []
+            },
+            "love": {
+                "value": 0.0,
+                "reasons": []
+            },
+            "optimism": {
+                "value": 0.5,
+                "reasons": []
+            },
+            "pessimism": {
+                "value": 0.0,
+                "reasons": []
+            },
+            "sadness": {
+                "value": 0.0,
+                "reasons": []
+            },
+            "surprise": {
+                "value": 0.2,
+                "reasons": []
+            },
+            "trust": {
+                "value": 0.5,
+                "reasons": []
+            }
+        }
+    }
+}

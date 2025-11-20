@@ -128,7 +128,7 @@ class LLMModel:
                 return "a slight amount of"
             return None
     
-    def generate_response(self, conversation_history):
+    def generate_response(self, conversation_history, emotion_threshold=0.4, n_top_emotions=2) -> str:
         current_emotional_state = self.memory_manager.get_current_emotional_state()
         # Get the two higher emotions other than neutral and build emotional context
         sorted_emotions = sorted(
@@ -136,7 +136,7 @@ class LLMModel:
             key=lambda item: item[1]["value"],
             reverse=True
         )
-        top_emotions = [f"I feel {self.intensity_phrase(data['value'])} {emotion}" for emotion, data in sorted_emotions if data["value"] > 0.5][:2]
+        top_emotions = [f"I feel {self.intensity_phrase(data['value'])} {emotion}" for emotion, data in sorted_emotions if data["value"] > emotion_threshold][:n_top_emotions]
         emotional_context = ". ".join(top_emotions) if top_emotions else None
         if emotional_context is not None:
             emotional_prompt = (
