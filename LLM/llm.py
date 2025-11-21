@@ -62,53 +62,8 @@ class LLMModel:
     
     from datetime import datetime
 
-    def init_conversation(self, user_name, verbose=False) -> str:
-        memory_db = self.memory_manager.memory_database
-        meta = memory_db.get("meta", {})
-
-        # --- Informational sub-prompts from MemoryManager ---
-        bot_info_prompt = self.memory_manager.get_bot_informational_prompt()
-        user_info_prompt = self.memory_manager.get_user_informational_prompt()
-        memory_prompt = self.memory_manager.get_memory_prompt()
-        timing_prompt = self.memory_manager.get_timing_information_prompt()
-        emotional_prompt = self.memory_manager.get_emotional_prompt()
-
-        # --- First interaction vs previous interactions ---
-        last_interaction = meta.get("last_interaction", None)
-        is_first_interaction = bool(meta.get("first_interaction", False)) or last_interaction in (None, "Unknown", "")
-
-        if is_first_interaction:
-            relationship_instruction = (
-                f"This is your first conversation with {user_name}. "
-                "You do not know them yet, so introduce yourself clearly, explain this is your first time chatting, "
-                "and ask a few simple questions to get to know them. "
-                "Build rapport in a natural, warm way.\n"
-            )
-        else:
-            relationship_instruction = (
-                f"You have already talked with {user_name} before. "
-                "Use your memories and the information below to maintain continuity, "
-                "refer back to past topics when helpful, and avoid asking the same basic questions again.\n"
-            )
-
-        # --- Context block ---
-        context_block = (
-            "Context Information. Always use this info to ground your answers where relevant:\n"
-            f"- Today is {datetime.now().strftime('%B %d, %Y')}.\n"
-            f"- You are writing text messages in WhatsApp as '{self.ai_username}'. "
-            "Use WhatsApp-like style (short messages, informal but clear language).\n"
-            "- You are a pen pal: you do not know the exact physical location of the user "
-            "and you cannot organize in-person meetings because distance, so your relationship is limited to written communication.\n"
-            f"- The person you are talking to is called {user_name}. Remember and use this name naturally.\n"
-            f"{emotional_prompt}"
-            f"{relationship_instruction}"
-            f"{timing_prompt}"
-            f"{bot_info_prompt}"
-            f"{user_info_prompt}"
-            f"{memory_prompt}"
-        )
-
-        # --- Final system prompt ---
+    def get_system_prompt(self, verbose=False) -> str:
+        context_block = self.memory_manager.get_memories_for_prompt()
         prompt = (
             "<|start_header_id|>system<|end_header_id|>\n"
             f"{self.ai_personality_prompt}\n"
@@ -135,24 +90,25 @@ class LLMModel:
                 return "a slight amount of"
             return None
     
-    def generate_response(self, conversation_history, emotion_threshold=0.4, n_top_emotions=2) -> str:
-        current_emotional_state = self.memory_manager.get_current_emotional_state()
-        # Get the two higher emotions other than neutral and build emotional context
-        sorted_emotions = sorted(
-            current_emotional_state.items(),
-            key=lambda item: item[1]["value"],
-            reverse=True
-        )
-        top_emotions = [f"I feel {self.intensity_phrase(data['value'])} {emotion}" for emotion, data in sorted_emotions if data["value"] > emotion_threshold][:n_top_emotions]
-        emotional_context = ". ".join(top_emotions) if top_emotions else None
-        if emotional_context is not None:
-            emotional_prompt = (
-                "<|start_header_id|>system<|end_header_id|>"
-                f"These are the emotions I am currently feeling: {emotional_context}.\n"
-                "<|eot_id|>"
+    def generate_response(self, conversation_history, emotion_threshold=0.4, n_top_emotions=2, include_emotional_context: bool = False) -> str:
+        if include_emotional_context:
+            current_emotional_state = self.memory_manager.get_current_emotional_state()
+            # Get the two higher emotions other than neutral and build emotional context
+            sorted_emotions = sorted(
+                current_emotional_state.items(),
+                key=lambda item: item[1]["value"],
+                reverse=True
             )
-            conversation_history += emotional_prompt
-            print(f"Emotional Context: {emotional_context}")
+            top_emotions = [f"I feel {self.intensity_phrase(data['value'])} {emotion}" for emotion, data in sorted_emotions if data["value"] > emotion_threshold][:n_top_emotions]
+            emotional_context = ". ".join(top_emotions) if top_emotions else None
+            if emotional_context is not None:
+                emotional_prompt = (
+                    "<|start_header_id|>system<|end_header_id|>"
+                    f"These are the emotions I am currently feeling: {emotional_context}.\n"
+                    "<|eot_id|>"
+                )
+                conversation_history += emotional_prompt
+                print(f"Emotional Context: {emotional_context}")
         prompt = conversation_history + f"<|start_header_id|>{self.ai_username}<|end_header_id|>\n"
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.model.device)
         gen_ids = self.model.generate(
@@ -169,7 +125,7 @@ class LLMModel:
         )
         new_tokens = gen_ids[0, inputs.input_ids.shape[1]:]
         response = self.tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
-        self.memory_manager.update_current_emotional_state(response)
+        # self.memory_manager.update_current_emotional_state(response)
         return response
     
     def end_conversation(self):

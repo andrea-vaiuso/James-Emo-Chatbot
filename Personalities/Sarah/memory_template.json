@@ -30,60 +30,26 @@
     },
 
     "current_affect_state": {
-        "anger": {"value": 0.0},
-        "anticipation": {"value": 0.0},
-        "disgust": {"value": 0.0},
-        "fear": {"value": 0.0},
-        "joy": {"value": 0.5},
-        "love": {"value": 0.0},
-        "optimism": {"value": 0.3},
-        "pessimism": {"value": 0.0},
-        "sadness": {"value": 0.0},
-        "surprise": {"value": 0.2},
-        "trust": {"value": 0.5}
     },
 
     "short_term_memory": {
-        "recent_summaries": [
+        "memories": [
             {
                 "timestamp": "Unknown",
                 "summary": "",
+                "associated_emotions": {
+                },
                 "last_interactions": []
             }
-        ],
-        "affect_state": {
-            "anger": {"value": 0.0, "reasons": []},
-            "anticipation": {"value": 0.0, "reasons": []},
-            "disgust": {"value": 0.0, "reasons": []},
-            "fear": {"value": 0.0, "reasons": []},
-            "joy": {"value": 0.5, "reasons": []},
-            "love": {"value": 0.0, "reasons": []},
-            "optimism": {"value": 0.3, "reasons": []},
-            "pessimism": {"value": 0.0, "reasons": []},
-            "sadness": {"value": 0.0, "reasons": []},
-            "surprise": {"value": 0.2, "reasons": []},
-            "trust": {"value": 0.5, "reasons": []}
-        }
+        ]
     },
     "long_term_memory": {
-        "facts": [
+        "memories": [
             {
                 "timestamp": "Unknown",
                 "summary": ""
             }
         ],
-        "persistent_affect_state": {
-            "anger": {"value": 0.0, "reasons": []},
-            "anticipation": {"value": 0.0, "reasons": []},
-            "disgust": {"value": 0.0, "reasons": []},
-            "fear": {"value": 0.0, "reasons": []},
-            "joy": {"value": 0.5, "reasons": []},
-            "love": {"value": 0.0, "reasons": []},
-            "optimism": {"value": 0.5, "reasons": []},
-            "pessimism": {"value": 0.0, "reasons": []},
-            "sadness": {"value": 0.0, "reasons": []},
-            "surprise": {"value": 0.2, "reasons": []},
-            "trust": {"value": 0.5, "reasons": []}
-        }
+        "persistent_emotions": []
     }
 }

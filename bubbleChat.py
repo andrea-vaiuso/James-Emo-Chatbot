@@ -1,92 +1,53 @@
 import tkinter as tk
 from tkinter import Canvas, Frame, Label, Entry, Button
-import threading, random
+import threading
 from datetime import datetime
-import torch
 from PIL import Image, ImageTk, ImageDraw
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from utilities import play_system_sound, SOUNDS
 from LLM.llm import LLMModel
-from Personalities.personality import Personality
-from personality_selector_gui import discover_personalities, select_personality
-from user_profile_gui import load_or_create_user_profile, PROFILE_FILE
 
+# TODO: Rewrite readme with new features and system architecture (memory and emotions structure and hierarchy).
+# TODO: Add summarization of important events and informations about the user and the bot profiles: (previous summarization as input, add only informations that are still not memorized, use a text similarity model to discard same memories).
 # =========================
-# THEME / BEHAVIOR SETTINGS
+# self.theme / BEHAVIOR SETTINGS
 # =========================
-THEME = {
-    "bg": "#111B21",
-    "bubble_user_bg": "#005C4B",
-    "bubble_bot_bg": "#1F2C34",
-    "bubble_sys_bg": "#182229",
-    "header_height": 64,
-    "header_bar_bg": "#0B141A",
-    "header_avatar_bg": "#052D1A",
-    "user_name_color": "#9EE9BB",
-    "assistant_name_color": "#8FD1FF",
-    "system_name_color": "#F4EBD0",
-    "user_text_color": "#E9F5EB",
-    "assistant_text_color": "#DDE6EA",
-    "system_text_color": "#F8F4E7",
-    "typing_color": "#8696A0",
-    "timestamp_color": "#8696A0",
-    "wrap": 520,      # px wrap-length for message text
-    "radius": 22,     # bubble corner radius
-    "pad_in": (10, 4), # inner padding (x, y) - slimmer bubbles
-    "input_bar_bg": "#1F2C34",
-    "input_bg": "#0B141A",
-    "input_fg": "#E9F5EB",
-    "input_border": "#0B845E",
-    "button_bg": "#25D366",
-    "button_fg": "#052D1A",
-    "button_active_bg": "#1DA851",
-    "button_active_fg": "#FFFFFF",
-    "button_icon": "\u27A4"
-}
-FONTS = {
-    "name": ("Segoe UI", 12, "bold"),
-    "header_name": ("Segoe UI", 15, "bold"),
-    "text": ("Segoe UI", 12, "normal"),
-    "input": ("Segoe UI", 12, "normal"),
-    "button": ("Segoe UI", 12, "bold"),
-    "typing": ("Segoe UI", 10, "italic"),
-    "timestamp": ("Segoe UI", 8, "normal")
-}
+
+N = 3  # Number of messages between emotional updates
 TIME_FMT = "%H:%M"  # NEW
-
-TYPING_DELAY_RANGE = (1500, 2500)  # ms, randomized, does not block LLM
 
 # ===========================================
 #  BUBBLE CHAT UI (TKINTER) + ROUNDED BUBBLES
 # ===========================================
 class BubbleChatApp:
-    def __init__(self, root: tk.Tk, user_name: str, ai_username: str, llm: LLMModel, max_history_length=8000):
+    def __init__(self, root: tk.Tk, user_name: str, ai_username: str, llm: LLMModel, theme, fonts, max_history_length=8000):
+        self.theme = theme
+        self.fonts = fonts
         self.llm_obj = llm
         self.root = root
         self.root.title("chat")
-        self.root.configure(bg=THEME["bg"])
+        self.root.configure(bg=self.theme["bg"])
         self.root.resizable(True, True)
 
         self.max_history_length = max_history_length
 
-        self._build_header(THEME["header_height"])
+        self._build_header(self.theme["header_height"])
 
         # Container for canvas + scrollbar
-        self.top_container = Frame(self.root, bg=THEME["bg"])
+        self.top_container = Frame(self.root, bg=self.theme["bg"])
         self.top_container.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
         # Canvas + inner frame
-        self.canvas = tk.Canvas(self.top_container, bg=THEME["bg"], highlightthickness=0)
+        self.canvas = tk.Canvas(self.top_container, bg=self.theme["bg"], highlightthickness=0)
         self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         self.scrollbar = tk.Scrollbar(self.top_container, orient="vertical", command=self.canvas.yview)
         self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
 
-        self.chat_frame = Frame(self.canvas, bg=THEME["bg"])
+        self.chat_frame = Frame(self.canvas, bg=self.theme["bg"])
         self.window_id = self.canvas.create_window((0, 0), window=self.chat_frame, anchor="nw")
         self._bubble_registry = {}
-        self._current_wrap = THEME["wrap"]
+        self._current_wrap = self.theme["wrap"]
 
         # Bindings to keep width and scroll working correctly
         self.chat_frame.bind("<Configure>", self._on_frame_configure)
@@ -96,22 +57,22 @@ class BubbleChatApp:
         # Bottom input area
         self.bottom_frame = Frame(
             self.root,
-            bg=THEME["input_bar_bg"],
-            highlightbackground=THEME["input_border"],
+            bg=self.theme["input_bar_bg"],
+            highlightbackground=self.theme["input_border"],
             highlightthickness=1
         )
         self.bottom_frame.pack(side=tk.BOTTOM, fill=tk.X)
 
         self.user_input = Entry(
             self.bottom_frame,
-            font=FONTS["input"],
-            bg=THEME["input_bg"],
-            fg=THEME["input_fg"],
-            insertbackground=THEME["input_fg"],
+            font=self.fonts["input"],
+            bg=self.theme["input_bg"],
+            fg=self.theme["input_fg"],
+            insertbackground=self.theme["input_fg"],
             relief="flat",
             bd=0,
-            highlightbackground=THEME["input_border"],
-            highlightcolor=THEME["input_border"],
+            highlightbackground=self.theme["input_border"],
+            highlightcolor=self.theme["input_border"],
             highlightthickness=1
         )
         self.user_input.pack(side=tk.LEFT, padx=(6, 6), pady=6, fill=tk.X, expand=True)
@@ -119,13 +80,13 @@ class BubbleChatApp:
 
         self.send_button = Button(
             self.bottom_frame,
-            text=f"{THEME['button_icon']} Send",
-            font=FONTS["button"],
+            text=f"{self.theme['button_icon']} Send",
+            font=self.fonts["button"],
             command=self.on_send,
-            bg=THEME["button_bg"],
-            fg=THEME["button_fg"],
-            activebackground=THEME["button_active_bg"],
-            activeforeground=THEME["button_active_fg"],
+            bg=self.theme["button_bg"],
+            fg=self.theme["button_fg"],
+            activebackground=self.theme["button_active_bg"],
+            activeforeground=self.theme["button_active_fg"],
             relief="flat",
             bd=0,
             cursor="hand2",
@@ -137,13 +98,14 @@ class BubbleChatApp:
         # State
         self.user_name = user_name
         self.ai_username = ai_username
-        self.conversation_history = self.llm_obj.init_conversation(self.user_name, verbose=True)
+        self.conversation_history = self.llm_obj.get_system_prompt(verbose=True)
         self.typing_after_id = None
         self.typing_visible = False
         self._typing_frame = None
+        self._history_lock = threading.Lock()
 
         # Initial system greeting
-        self.add_message_bubble("System", f"Hello {self.user_name}, welcome to the chat with {self.ai_username}!\nType 'exit' or 'quit' to leave.", role="system")
+        self.add_message_bubble("Bubble Chat", f"Hello {self.user_name}, welcome to the chat with {self.ai_username}!\nType 'exit' or 'quit' to leave.", role="system")
 
     # ---- scrolling fixes ----
     def _on_frame_configure(self, _event):
@@ -177,7 +139,7 @@ class BubbleChatApp:
         if width and width > 1:
             usable = max(240, width - 120)
             return int(usable)
-        return THEME["wrap"]
+        return self.theme["wrap"]
 
     def _rounded_rect_points(self, width, height, radius):
         r = min(radius, width / 2, height / 2)
@@ -204,7 +166,7 @@ class BubbleChatApp:
         inner.update_idletasks()
         width = inner.winfo_reqwidth() + meta["pad_x"] * 2
         height = inner.winfo_reqheight() + meta["pad_y"] * 2
-        points = self._rounded_rect_points(width, height, THEME["radius"])
+        points = self._rounded_rect_points(width, height, self.theme["radius"])
         canvas = meta["canvas"]
         canvas.coords(meta["polygon"], *points)
         canvas.configure(width=width, height=height)
@@ -242,22 +204,51 @@ class BubbleChatApp:
             return
 
         # Update conversation and start reply thread
-        self.conversation_history += f"<|start_header_id|>{self.user_name}<|end_header_id|>\n{user_text} <|eot_id|>\n"
-        self.llm_obj.memory_chunks.append(f"{self.user_name}: {user_text}\n")
+        with self._history_lock:
+            self.conversation_history += f"<|start_header_id|>{self.user_name}<|end_header_id|>\n{user_text} <|eot_id|>\n"
+            self.conversation_history = self.conversation_history[-self.max_history_length:]
+            self.llm_obj.memory_chunks.append(f"{self.user_name}: {user_text}\n")
         threading.Thread(target=self._llm_reply_thread, daemon=True).start()
 
+    def _update_header_in_conversation_history(self):
+        """ Updates the system prompt in the conversation history using init_conversation, but keeping the chat history. """
+        with self._history_lock:
+            old_history = self.conversation_history
+            self.conversation_history = self.llm_obj.get_system_prompt(verbose=False)
+            # Append old messages after the new system prompt
+            split_index = old_history.find(f"<|start_header_id|>{self.user_name}<|end_header_id|>\n")
+            if split_index != -1:
+                user_and_bot_messages = old_history[split_index:]
+                self.conversation_history += user_and_bot_messages
+            self.conversation_history = self.conversation_history[-self.max_history_length:]
+
+    def _refresh_conversation_state(self):
+        with self._history_lock:
+            total_messages = len(self.llm_obj.memory_chunks)
+            if total_messages <= N:
+                return False
+            recent_text = "".join(self.llm_obj.memory_chunks[-N:])
+        self.llm_obj.memory_manager.update_current_emotional_state(recent_text)
+        self._update_header_in_conversation_history()
+        return True
+        
     def _llm_reply_thread(self):
-        # Schedule showing a typing bubble after a small random delay.
-        delay_ms = random.randint(*TYPING_DELAY_RANGE)
-        self.typing_after_id = self.root.after(delay_ms, lambda: self._show_typing_bubble(f"{self.llm_obj.ai_username} is writing..."))
+        self._refresh_conversation_state()
+        self.typing_after_id = self.root.after(0, lambda: self._show_typing_bubble(f"{self.llm_obj.ai_username} is writing..."))
 
-        # Run generation in this thread
-        response = self.llm_obj.generate_response(self.conversation_history)
+        with self._history_lock:
+            prompt_history = self.conversation_history
+        response = self.llm_obj.generate_response(prompt_history)
 
-        # Cancel pending typing if not yet shown, remove if shown
+        with self._history_lock:
+            self.conversation_history += f"<|start_header_id|>{self.llm_obj.ai_username}<|end_header_id|>\n{response}\n<|eot_id|>\n"
+            self.conversation_history = self.conversation_history[-self.max_history_length:]
+            self.llm_obj.memory_chunks.append(f"{self.llm_obj.ai_username}: {response}\n")
+
+        self._refresh_conversation_state()
+
         def finalize_ui():
             if self.typing_after_id is not None:
-                # If typing bubble was not shown yet, this cancels its appearance
                 try:
                     self.root.after_cancel(self.typing_after_id)
                 except Exception:
@@ -266,14 +257,9 @@ class BubbleChatApp:
             if self.typing_visible:
                 self._remove_typing_bubble()
 
-            # Append to history and render
-            self.conversation_history += f"<|start_header_id|>{self.llm_obj.ai_username}<|end_header_id|>\n{response}\n<|eot_id|>\n"
-            self.llm_obj.memory_chunks.append(f"{self.llm_obj.ai_username}: {response}\n")
-            self.conversation_history = self.conversation_history[-self.max_history_length:]
             self.add_message_bubble(self.llm_obj.ai_username, response, role="bot")
             play_system_sound(SOUNDS["recv"])
 
-        # Marshal UI ops back to main thread
         self.root.after(0, finalize_ui)
 
     # ---- typing bubble helpers ----
@@ -300,7 +286,7 @@ class BubbleChatApp:
         Creates a rounded bubble composed of a Canvas with a rounded rect and two labels:
         first line bold name, second line the message text.
         """
-        outer = Frame(self.chat_frame, bg=THEME["bg"])
+        outer = Frame(self.chat_frame, bg=self.theme["bg"])
         outer.pack(fill=tk.X, pady=3, padx=10)
 
         # alignment
@@ -308,35 +294,35 @@ class BubbleChatApp:
 
         # colors
         if role == "user":
-            bb = THEME["bubble_user_bg"]
-            name_color = THEME["user_name_color"]
-            msg_color = THEME["user_text_color"]
+            bb = self.theme["bubble_user_bg"]
+            name_color = self.theme["user_name_color"]
+            msg_color = self.theme["user_text_color"]
         elif role == "system":
-            bb = THEME["bubble_sys_bg"]
-            name_color = THEME["system_name_color"]
-            msg_color = THEME["system_text_color"]
+            bb = self.theme["bubble_sys_bg"]
+            name_color = self.theme["system_name_color"]
+            msg_color = self.theme["system_text_color"]
         elif role == "typing":
-            bb = THEME["bubble_bot_bg"]
-            name_color = THEME["assistant_name_color"]
-            msg_color = THEME["assistant_text_color"]
+            bb = self.theme["bubble_bot_bg"]
+            name_color = self.theme["assistant_name_color"]
+            msg_color = self.theme["assistant_text_color"]
         else:
-            bb = THEME["bubble_bot_bg"]
-            name_color = THEME["assistant_name_color"]
-            msg_color = THEME["assistant_text_color"]
+            bb = self.theme["bubble_bot_bg"]
+            name_color = self.theme["assistant_name_color"]
+            msg_color = self.theme["assistant_text_color"]
 
         # Canvas-based bubble
-        c = Canvas(outer, bg=THEME["bg"], highlightthickness=0)
+        c = Canvas(outer, bg=self.theme["bg"], highlightthickness=0)
         c.pack(anchor=align, padx=0)
 
         # A frame inside canvas to hold labels
         inner = Frame(c, bg=bb)
         # Labels: name on first line (bold), text on second line
-        name_lbl = Label(inner, text=name, fg=name_color, bg=bb, font=FONTS["name"], anchor="w", justify="left")
-        name_lbl.pack(anchor="w", padx=(THEME["pad_in"][0], THEME["pad_in"][0]), pady=(THEME["pad_in"][1], 0))
+        name_lbl = Label(inner, text=name, fg=name_color, bg=bb, font=self.fonts["name"], anchor="w", justify="left")
+        name_lbl.pack(anchor="w", padx=(self.theme["pad_in"][0], self.theme["pad_in"][0]), pady=(self.theme["pad_in"][1], 0))
 
-        msg_font = FONTS["typing"] if role == "typing" else FONTS["text"]
+        msg_font = self.fonts["typing"] if role == "typing" else self.fonts["text"]
         if role == "typing":
-            msg_color = THEME["typing_color"]
+            msg_color = self.theme["typing_color"]
         text_lbl = Label(
             inner,
             text=text,
@@ -347,17 +333,17 @@ class BubbleChatApp:
             justify="left",
             anchor="w"
         )
-        text_lbl.pack(anchor="w", padx=(THEME["pad_in"][0], THEME["pad_in"][0]), pady=(1, THEME["pad_in"][1]))
+        text_lbl.pack(anchor="w", padx=(self.theme["pad_in"][0], self.theme["pad_in"][0]), pady=(1, self.theme["pad_in"][1]))
 
         if ts is None:
             ts = datetime.now().strftime(TIME_FMT)
         meta_row = Frame(inner, bg=bb)
         meta_row.pack(anchor="e",
                     fill="x",
-                    padx=(THEME["pad_in"][0], THEME["pad_in"][0]),
-                    pady=(0, THEME["pad_in"][1]))
-        ts_lbl = Label(meta_row, text=ts, fg=THEME["timestamp_color"],
-                    bg=bb, font=FONTS["timestamp"])
+                    padx=(self.theme["pad_in"][0], self.theme["pad_in"][0]),
+                    pady=(0, self.theme["pad_in"][1]))
+        ts_lbl = Label(meta_row, text=ts, fg=self.theme["timestamp_color"],
+                    bg=bb, font=self.fonts["timestamp"])
         ts_lbl.pack(side="right")
 
         # Materialize sizes to draw rounded rect behind
@@ -366,7 +352,7 @@ class BubbleChatApp:
         pad_y = 1
         width = inner.winfo_reqwidth() + pad_x * 2
         height = inner.winfo_reqheight() + pad_y * 2
-        points = self._rounded_rect_points(width, height, THEME["radius"])
+        points = self._rounded_rect_points(width, height, self.theme["radius"])
         polygon_id = c.create_polygon(points, smooth=True, splinesteps=20, fill=bb, outline=bb)
 
         # Place inner frame inside canvas as a window
@@ -401,8 +387,8 @@ class BubbleChatApp:
     def _build_header(self, header_height):
         self.header_frame = Frame(
             self.root,
-            bg=THEME["header_bar_bg"],
-            highlightbackground=THEME["input_border"],
+            bg=self.theme["header_bar_bg"],
+            highlightbackground=self.theme["input_border"],
             highlightthickness=1,
             height=header_height
         )
@@ -410,16 +396,16 @@ class BubbleChatApp:
 
         self.ai_avatar_photo = self._load_ai_avatar_image()
         avatar_kwargs = {
-            "bg": THEME["header_avatar_bg"],
+            "bg": self.theme["header_avatar_bg"],
         }
         if self.ai_avatar_photo:
-            self.avatar_label = Label(self.header_frame, image=self.ai_avatar_photo, bg=THEME["header_bar_bg"])
+            self.avatar_label = Label(self.header_frame, image=self.ai_avatar_photo, bg=self.theme["header_bar_bg"])
         else:
             self.avatar_label = Label(
                 self.header_frame,
                 text=self.llm_obj.ai_username[:1],
-                fg=THEME["assistant_name_color"],
-                font=FONTS["name"],
+                fg=self.theme["assistant_name_color"],
+                font=self.fonts["name"],
                 width=2,
                 **avatar_kwargs
             )
@@ -428,9 +414,9 @@ class BubbleChatApp:
         self.header_name_label = Label(
             self.header_frame,
             text=self.llm_obj.ai_username,
-            fg=THEME["assistant_name_color"],
-            bg=THEME["header_bar_bg"],
-            font=FONTS["header_name"]
+            fg=self.theme["assistant_name_color"],
+            bg=self.theme["header_bar_bg"],
+            font=self.fonts["header_name"]
         )
         self.header_name_label.pack(side=tk.LEFT, pady=8)
 
@@ -448,110 +434,3 @@ class BubbleChatApp:
         draw.ellipse((0, 0, size, size), fill=255)
         image.putalpha(mask)
         return ImageTk.PhotoImage(image)
-
-
-
-if __name__ == "__main__":
-    root = tk.Tk()
-    try:
-        root.configure(bg=THEME["bg"])
-    except Exception:
-        pass
-    try:
-        root.geometry("440x820")
-    except Exception:
-        pass
-    # Keep root invisible while setup dialogs run, but still present so child windows display
-    try:
-        root.attributes("-alpha", 0.0)
-    except Exception:
-        pass
-    root.update_idletasks()
-    root.deiconify()
-
-    user_profile = load_or_create_user_profile(root, THEME, FONTS)
-    if not user_profile:
-        user_profile = {
-            "name": "Andrea",
-            "age": "30",
-            "gender": "Not specified"
-        }
-
-    available_personalities = discover_personalities()
-
-    while True:
-        selected_personality, reset_user, cancelled = select_personality(root, available_personalities, THEME, FONTS)
-        if cancelled:
-            root.destroy()
-            exit()
-        if reset_user:
-            try:
-                if PROFILE_FILE.exists():
-                    PROFILE_FILE.unlink()
-            except Exception:
-                pass
-            user_profile = load_or_create_user_profile(root, THEME, FONTS)
-            continue
-        if not selected_personality:
-            selected_personality = available_personalities[0]
-        break
-
-    user_name = user_profile.get("name", "User")
-    ai_username = selected_personality.name
-
-    # Show main window for chat
-    try:
-        root.attributes("-alpha", 1.0)
-    except Exception:
-        pass
-    root.lift()
-
-    # Splash screen while loading the LLM (prevents white flash)
-    splash = tk.Toplevel(root)
-    splash.configure(bg=THEME["bg"])
-    splash.overrideredirect(True)
-    msg = tk.Label(
-        splash,
-        text="Loading your companion...\nThis may take a moment",
-        bg=THEME["bg"],
-        fg=THEME["assistant_text_color"],
-        font=FONTS["header_name"],
-        justify="center",
-        padx=24,
-        pady=18,
-    )
-    msg.pack(fill=tk.BOTH, expand=True)
-    splash.update_idletasks()
-    try:
-        w = splash.winfo_reqwidth()
-        h = splash.winfo_reqheight()
-        x = (splash.winfo_screenwidth() // 2) - (w // 2)
-        y = (splash.winfo_screenheight() // 2) - (h // 2)
-        splash.geometry(f"+{x}+{y}")
-        splash.deiconify()
-        splash.lift()
-        splash.attributes("-topmost", True)
-        splash.wait_visibility()
-        splash.update()
-        splash.after(400, lambda: splash.attributes("-topmost", False))
-    except Exception:
-        pass
-    root.update_idletasks()
-    root.update()
-
-    try:
-        llm = LLMModel(ai_username=ai_username, 
-                    personality_prompt_file=selected_personality.prompt_file,
-                    profile_picture_path=selected_personality.profile_picture,
-                    user_name=user_name,
-                    user_age=user_profile.get("age"),
-                    user_gender=user_profile.get("gender", "Not specified"))
-    finally:
-        try:
-            splash.destroy()
-        except Exception:
-            pass
-
-    app = BubbleChatApp(root, user_name, ai_username, llm)
-    root.mainloop()
-    llm.end_conversation()
