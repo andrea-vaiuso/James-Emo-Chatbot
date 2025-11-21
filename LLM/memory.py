@@ -7,7 +7,7 @@ import json
 import hashlib
 
 def now():
-    return datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+    return datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
 def generate_user_id(user_name):
     return hashlib.sha256(user_name.encode('utf-8')).hexdigest()
@@ -97,22 +97,25 @@ class MemoryManager:
         return updated_value
     
     # TODO: Insert a function to be executed in a thread to decay emotional state over time and, if the anticipation is high, eventually turn on a flag to activate proactive new messages.
-    
-    def update_current_emotional_state(self, text: str):
-        emo_state = self.esm.analyze_emotional_state(text)
-        # For each emotion in emo_state, update the memory database current_affect_state by updating value and appending reasons
-        for emo in emo_state.keys():
+
+    def update_current_emotional_state(self, text: str, emotion_threshold=0.5, max_reasons=3):
+        emo_state = self.esm.analyze_emotional_state(text, emotion_threshold=emotion_threshold)
+        # For each detected emotion, smooth the value and append reasons (capped by max_reasons)
+        for emo, data in emo_state.items():
+            current_entry = self.memory_database["current_affect_state"].get(emo, {"value": 0.0, "reasons": []})
             new_emotional_value = self.update_emotional_value(
-                old = self.memory_database["current_affect_state"].get(emo, {"value": 0.0, "reasons": []})["value"],
-                new = emo_state[emo]["value"]
+                old=current_entry.get("value", 0.0),
+                new=data["value"]
             )
-            if emo not in self.memory_database["current_affect_state"].keys():
-                self.memory_database["current_affect_state"][emo] = {"value": 0.0, "reasons": []}
-            self.memory_database["current_affect_state"][emo]["value"] = new_emotional_value
-            if emo_state[emo]["reasons"]:
-                    self.memory_database["current_affect_state"][emo]["reasons"] = emo_state[emo]["reasons"]
-                
-        self.memory_database["current_affect_state"] = emo_state
+            existing_reasons = list(current_entry.get("reasons", []))
+            new_reasons = data.get("reasons", [])
+            if new_reasons:
+                existing_reasons.extend(new_reasons)
+                existing_reasons = existing_reasons[-max_reasons:]
+            self.memory_database["current_affect_state"][emo] = {
+                "value": new_emotional_value,
+                "reasons": existing_reasons
+            }
     
     def get_current_emotional_state(self) -> dict:
         return self.memory_database["current_affect_state"]
@@ -284,7 +287,7 @@ class MemoryManager:
             f"{shrt_term_memories_paragraph}\n"
             f"\n"
             f"[Current Emotional State]:\n"
-            f"These are your current emotional states. Always use them to express your feelings where relevant.\n"
+            f"These are your current emotional states. Let them subtly color your tone and word choice; do not explicitly state the emotion or add parenthetical emotional notes.\n"
             f"{current_emotional_state_paragraph}\n"
             f"{persistent_emotions_section}"
         )
@@ -321,5 +324,8 @@ class MemoryManager:
             time_parts.append("less than a minute")
 
         time_passed_str = ", ".join(time_parts)
-        return f"[Timing Information]:\n The last interaction with the user was {time_passed_str} ago.\n"
+        ago_phrase = f"Last interaction {time_passed_str} ago."
+        if delta.days >= 7:
+            ago_phrase += " It's been a while—consider re-connecting naturally."
+        return f"[Timing Information]:\n {ago_phrase}\n"
     

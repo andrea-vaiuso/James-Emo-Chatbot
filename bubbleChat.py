@@ -19,11 +19,12 @@ TIME_FMT = "%H:%M"  # NEW
 #  BUBBLE CHAT UI (TKINTER) + ROUNDED BUBBLES
 # ===========================================
 class BubbleChatApp:
-    def __init__(self, root: tk.Tk, user_name: str, ai_username: str, llm: LLMModel, theme, fonts, max_history_length=8000):
+    def __init__(self, root: tk.Tk, user_name: str, ai_username: str, llm: LLMModel, theme, fonts, max_history_length=8000, on_back=None):
         self.theme = theme
         self.fonts = fonts
         self.llm_obj = llm
         self.root = root
+        self.on_back = on_back
         self.root.title("chat")
         self.root.configure(bg=self.theme["bg"])
         self.root.resizable(True, True)
@@ -103,6 +104,13 @@ class BubbleChatApp:
         self.typing_visible = False
         self._typing_frame = None
         self._history_lock = threading.Lock()
+        self._generation_id = 0
+        self._current_cancel_event = None
+        self._generation_thread = None
+        self._pending_user_messages = []
+        self._pending_history_segments = []
+        self.last_interaction_label = None
+        self._user_has_sent_first_message = False
 
         # Initial system greeting
         self.add_message_bubble("Bubble Chat", f"Hello {self.user_name}, welcome to the chat with {self.ai_username}!\nType 'exit' or 'quit' to leave.", role="system")
@@ -194,9 +202,22 @@ class BubbleChatApp:
         if not user_text:
             return
 
+        if self.typing_after_id is not None:
+            try:
+                self.root.after_cancel(self.typing_after_id)
+            except Exception:
+                pass
+            self.typing_after_id = None
+        if self.typing_visible:
+            self._remove_typing_bubble()
+
         self.user_input.delete(0, tk.END)
         self.add_message_bubble(self.user_name, user_text, role="user")
         play_system_sound(SOUNDS["send"])
+        if not self._user_has_sent_first_message:
+            self._user_has_sent_first_message = True
+            if self.last_interaction_label:
+                self.last_interaction_label.config(text="online")
 
         if user_text.lower() in ["exit", "quit"]:
             self.add_message_bubble("System", "Exiting the chat. Goodbye!", role="system")
@@ -205,10 +226,14 @@ class BubbleChatApp:
 
         # Update conversation and start reply thread
         with self._history_lock:
-            self.conversation_history += f"<|start_header_id|>{self.user_name}<|end_header_id|>\n{user_text} <|eot_id|>\n"
+            addition = f"<|start_header_id|>{self.user_name}<|end_header_id|>\n{user_text} <|eot_id|>\n"
+            self.conversation_history += addition
             self.conversation_history = self.conversation_history[-self.max_history_length:]
             self.llm_obj.memory_chunks.append(f"{self.user_name}: {user_text}\n")
-        threading.Thread(target=self._llm_reply_thread, daemon=True).start()
+            self._pending_user_messages.append(user_text)
+            self._pending_history_segments.append(addition)
+        self._cancel_ongoing_generation()
+        self._start_generation_thread()
 
     def _update_header_in_conversation_history(self):
         """ Updates the system prompt in the conversation history using init_conversation, but keeping the chat history. """
@@ -232,22 +257,56 @@ class BubbleChatApp:
         self._update_header_in_conversation_history()
         return True
         
-    def _llm_reply_thread(self):
+    def _cancel_ongoing_generation(self):
+        if self._current_cancel_event is not None:
+            self._current_cancel_event.set()
+
+    def _start_generation_thread(self):
+        self._generation_id += 1
+        cancel_event = threading.Event()
+        self._current_cancel_event = cancel_event
+        thread = threading.Thread(target=self._llm_reply_thread, args=(cancel_event, self._generation_id), daemon=True)
+        self._generation_thread = thread
+        thread.start()
+
+    def _llm_reply_thread(self, cancel_event: threading.Event, generation_id: int):
         self._refresh_conversation_state()
+        # Ensure previous typing bubble is gone before showing new one
+        self.root.after(0, self._remove_typing_bubble)
         self.typing_after_id = self.root.after(0, lambda: self._show_typing_bubble(f"{self.llm_obj.ai_username} is writing..."))
 
         with self._history_lock:
-            prompt_history = self.conversation_history
+            tail_segments = list(self._pending_history_segments)
+            tail_len = sum(len(seg) for seg in tail_segments)
+            base_history = self.conversation_history[:-tail_len] if tail_len else self.conversation_history
+            combined_user_text = "\n".join(self._pending_user_messages)
+            if combined_user_text:
+                prompt_history = base_history + f"<|start_header_id|>{self.user_name}<|end_header_id|>\n{combined_user_text} <|eot_id|>\n"
+            else:
+                prompt_history = self.conversation_history
+        if cancel_event.is_set():
+            return
+
         response = self.llm_obj.generate_response(prompt_history)
 
+        if cancel_event.is_set():
+            return
+
         with self._history_lock:
-            self.conversation_history += f"<|start_header_id|>{self.llm_obj.ai_username}<|end_header_id|>\n{response}\n<|eot_id|>\n"
-            self.conversation_history = self.conversation_history[-self.max_history_length:]
+            updated_history = base_history
+            if combined_user_text:
+                updated_history += f"<|start_header_id|>{self.user_name}<|end_header_id|>\n{combined_user_text} <|eot_id|>\n"
+            updated_history += f"<|start_header_id|>{self.llm_obj.ai_username}<|end_header_id|>\n{response}\n<|eot_id|>\n"
+            self.conversation_history = updated_history[-self.max_history_length:]
             self.llm_obj.memory_chunks.append(f"{self.llm_obj.ai_username}: {response}\n")
+            self._pending_user_messages.clear()
+            self._pending_history_segments.clear()
 
         self._refresh_conversation_state()
 
         def finalize_ui():
+            if cancel_event.is_set() or generation_id != self._generation_id:
+                return
             if self.typing_after_id is not None:
                 try:
                     self.root.after_cancel(self.typing_after_id)
@@ -411,14 +470,43 @@ class BubbleChatApp:
             )
         self.avatar_label.pack(side=tk.LEFT, padx=(12, 8), pady=8)
 
+        name_container = Frame(self.header_frame, bg=self.theme["header_bar_bg"])
+        name_container.pack(side=tk.LEFT, pady=8)
+
         self.header_name_label = Label(
-            self.header_frame,
+            name_container,
             text=self.llm_obj.ai_username,
             fg=self.theme["assistant_name_color"],
             bg=self.theme["header_bar_bg"],
             font=self.fonts["header_name"]
         )
-        self.header_name_label.pack(side=tk.LEFT, pady=8)
+        self.header_name_label.pack(anchor="w")
+
+        self.last_interaction_label = Label(
+            name_container,
+            text=self._format_last_interaction_text(),
+            fg=self.theme.get("timestamp_color", self.theme["assistant_text_color"]),
+            bg=self.theme["header_bar_bg"],
+            font=self.fonts.get("timestamp", self.fonts["header_name"])
+        )
+        self.last_interaction_label.pack(anchor="w")
+
+        self.back_button = Button(
+            self.header_frame,
+            text="(Back)",
+            command=self._handle_back,
+            bg=self.theme["header_bar_bg"],
+            fg=self.theme["assistant_name_color"],
+            activebackground=self.theme["header_bar_bg"],
+            activeforeground=self.theme["assistant_name_color"],
+            relief="flat",
+            bd=0,
+            cursor="hand2",
+            font=self.fonts["button"],
+            padx=12,
+            pady=6
+        )
+        self.back_button.pack(side=tk.RIGHT, padx=(0, 12), pady=8)
 
     def _load_ai_avatar_image(self, size=52):
         profile_path = getattr(self.llm_obj, "profile_picture_path", None)
@@ -434,3 +522,36 @@ class BubbleChatApp:
         draw.ellipse((0, 0, size, size), fill=255)
         image.putalpha(mask)
         return ImageTk.PhotoImage(image)
+
+    def _format_last_interaction_text(self):
+        try:
+            timing_info = self.llm_obj.memory_manager.get_timing_information_prompt()
+        except Exception:
+            return "Last interaction: unknown"
+        lines = timing_info.splitlines()
+        for line in lines:
+            clean = line.replace("[Timing Information]:", "").strip()
+            if not clean:
+                continue
+            if "interaction" in clean.lower():
+                return clean
+        fallback = timing_info.strip()
+        return fallback if fallback else "Last interaction: unknown"
+
+    def _update_last_interaction_label(self):
+        if self.last_interaction_label:
+            self.last_interaction_label.config(text=self._format_last_interaction_text())
+
+    def _handle_back(self):
+        self._cancel_ongoing_generation()
+        self._remove_typing_bubble()
+        if self.on_back:
+            try:
+                self.on_back()
+            except Exception:
+                pass
+        else:
+            try:
+                self.root.quit()
+            except Exception:
+                pass
