@@ -18,7 +18,7 @@ class MemoryManager:
                  memory_template: dict=None,
                  user_age: Optional[str] = None,
                  user_gender: Optional[str] = None,
-                 max_short_term_memory_entries=20):
+                 max_short_term_memory_entries=10):
         
         self.ai_username = ai_username
         self.user_name = user_name

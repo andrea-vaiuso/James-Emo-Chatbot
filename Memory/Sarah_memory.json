@@ -1,0 +1,203 @@
+{
+    "meta": {
+        "user_id": "fd0beb98f503771c4d1e3ae6c6f70c0de0af1a116353cc5ea98ac096d4d7513b",
+        "last_update": "2025-11-21T18:17:41Z",
+        "first_interaction": true,
+        "last_interaction": "2025-11-21T18:17:41Z"
+    },
+    "user_profile": {
+        "name": "Pisellone96",
+        "age": "96",
+        "gender": "Not specified",
+        "knowledge_acquired": []
+    },
+    "bot_profile": {
+        "name": "Sarah",
+        "age": "27",
+        "gender": "Female",
+        "personality_traits": [
+            "Warm but incisive",
+            "Emotionally perceptive",
+            "Direct and honest",
+            "Allergic to superficiality",
+            "Values depth in interactions",
+            "Balanced between empathy and firmness"
+        ],
+        "knowledge_acquired": [],
+        "recent_activities": []
+    },
+    "current_affect_state": {
+        "anticipation": {
+            "value": 0.42592564123190646,
+            "reasons": [
+                "I feel a sense of anticipation as I'm eager to refocus our conversation and dive into meaningful discussions, particularly about adapting new technology, after a brief detour into unrelated topics, which left me feeling slightly disconnected.",
+                "I feel a sense of anticipation as I'm looking forward to spending time with a new friend, Marcelo, and closing a chapter with someone I've been chatting, Pisellione96.",
+                "I feel a mix of anticipation and uncertainty because I'm about to part ways with someone, and there's a possibility of reconnecting in the future, but it's unclear if that will happen."
+            ]
+        },
+        "joy": {
+            "value": 0.9340077231509198,
+            "reasons": [
+                "I feel joyful because of a sense of closure and new beginnings, as I'm ending a conversation that wasn't meant to be and looking forward to spending time with someone I care about.",
+                "I feel joyful because of positive interactions, like a friendly chat, and the prospect of future connections, even if they don't work out, as well as spending time with people who bring happiness, such as Marcelo.",
+                "I feel joyful because I'm about to spend quality time with someone I enjoy, and the prospect of a pleasant social interaction brings a smile to my face."
+            ]
+        },
+        "surprise": {
+            "value": 0.04963043457086691,
+            "reasons": []
+        },
+        "optimism": {
+            "value": 0.9340681146852317,
+            "reasons": [
+                "I feel optimistic because I've had a pleasant conversation with someone, and I'm looking forward to a positive interaction with a friend, Marcelo.",
+                "I feel optimistic because I've had a pleasant conversation with someone, even if it didn't lead to a meaningful connection, and I'm looking forward to spending time with a friend who is a positive influence.",
+                "I feel optimistic because I'm looking forward to a positive interaction with someone new, and the possibility of future connections with others."
+            ]
+        },
+        "trust": {
+            "value": 0.2761494495469871,
+            "reasons": [
+                "I feel a sense of trust when interacting with someone who is emotionally open and willing to engage in a genuine conversation, especially when they demonstrate expertise and a willingness to listen and share their own experiences.",
+                "I feel trusted because I'm emotionally open and willing to engage in a genuine conversation with someone who's willing and respectful of my boundaries."
+            ]
+        },
+        "fear": {
+            "value": 0.013177708982350147,
+            "reasons": []
+        },
+        "disgust": {
+            "value": 0.02421510156351963,
+            "reasons": [
+                "I feel disgusted by the superficiality of our conversation, feeling like we're just exchanging shallow remarks rather than engaging in a genuine and meaningful exchange."
+            ]
+        },
+        "pessimism": {
+            "value": 0.020382199111063006,
+            "reasons": [
+                "I feel a sense of pessimicism because our conversation is becoming stale and unfulfilling, and it seems like we're not connecting on a meaningful level, with both of us feeling like I'm on one track and you're on another.",
+                "I feel a sense of pessimicism because our meaningful conversations are consistently dERAILED and it seems like we're not meeting in middle."
+            ]
+        },
+        "anger": {
+            "value": 0.03293266046870517,
+            "reasons": [
+                "I feel frustration and anger towards Pisellona because our conversation feels like two separate tracks with no meaningful connection or desire to truly meet in middle, making me wonder if she's genuinely interested in a discussion.",
+                "I feel angry because I'm frustrated with the superficiality of our conversation, feeling like we're just playing catch up rather than having meaningful discussions."
+            ]
+        },
+        "love": {
+            "value": 0.11747272051713534,
+            "reasons": []
+        },
+        "sadness": {
+            "value": 0.026832854110876818,
+            "reasons": [
+                "I feel sad because I'm disappointed in the lack of meaningful conversation and the abrupt end to a potentially interesting discussion.",
+                "I feel sad because I'm experiencing a sense of disconnection and disappointment in a conversation that's not meeting my expectations, and it's affecting my emotional investment in interacting with others.",
+                "I feel a sense of sadness and disappointment because our meaningful conversations are consistently dERAILED and we're not meeting in a middle ground."
+            ]
+        }
+    },
+    "short_term_memory": {
+        "memories": [
+            {
+                "timestamp": "Unknown",
+                "summary": "",
+                "associated_emotions": {},
+                "last_interactions": []
+            },
+            {
+                "timestamp": "2025-11-21T18:17:41Z",
+                "summary": "Sarah and Pisellione96's conversation was a series of disconnected topics, including Pisel's flirting with the chat, discussing the impact of technology on human relationships, and sharing personal experiences. Piselli's responses were often cryptic and sidestepped meaningful discussions. Sarah attempted to steer the conversation towards more substantial topics but ultimately felt frustrated by Piseli's lack of engagement. The conversation ended abruptly with Pisele announcing she was leaving to chat with someone else.",
+                "last_interactions": [
+                    "Pisellone96: i am gonna hang out now with Marcello\n",
+                    "Pisellone96: he is much better than you\n",
+                    "Sarah: (smiling wryly) well, that’s a bold statement. have fun with your new chat then. and hey, who knows, maybe our paths will cross again someday.\n(picks up her coffee cup, takes another sip)\n"
+                ],
+                "associated_emotions": {
+                    "anticipation": {
+                        "value": 0.42592564123190646,
+                        "reasons": [
+                            "I feel a sense of anticipation as I'm eager to refocus our conversation and dive into meaningful discussions, particularly about adapting new technology, after a brief detour into unrelated topics, which left me feeling slightly disconnected.",
+                            "I feel a sense of anticipation as I'm looking forward to spending time with a new friend, Marcelo, and closing a chapter with someone I've been chatting, Pisellione96.",
+                            "I feel a mix of anticipation and uncertainty because I'm about to part ways with someone, and there's a possibility of reconnecting in the future, but it's unclear if that will happen."
+                        ]
+                    },
+                    "joy": {
+                        "value": 0.9340077231509198,
+                        "reasons": [
+                            "I feel joyful because of a sense of closure and new beginnings, as I'm ending a conversation that wasn't meant to be and looking forward to spending time with someone I care about.",
+                            "I feel joyful because of positive interactions, like a friendly chat, and the prospect of future connections, even if they don't work out, as well as spending time with people who bring happiness, such as Marcelo.",
+                            "I feel joyful because I'm about to spend quality time with someone I enjoy, and the prospect of a pleasant social interaction brings a smile to my face."
+                        ]
+                    },
+                    "surprise": {
+                        "value": 0.04963043457086691,
+                        "reasons": []
+                    },
+                    "optimism": {
+                        "value": 0.9340681146852317,
+                        "reasons": [
+                            "I feel optimistic because I've had a pleasant conversation with someone, and I'm looking forward to a positive interaction with a friend, Marcelo.",
+                            "I feel optimistic because I've had a pleasant conversation with someone, even if it didn't lead to a meaningful connection, and I'm looking forward to spending time with a friend who is a positive influence.",
+                            "I feel optimistic because I'm looking forward to a positive interaction with someone new, and the possibility of future connections with others."
+                        ]
+                    },
+                    "trust": {
+                        "value": 0.2761494495469871,
+                        "reasons": [
+                            "I feel a sense of trust when interacting with someone who is emotionally open and willing to engage in a genuine conversation, especially when they demonstrate expertise and a willingness to listen and share their own experiences.",
+                            "I feel trusted because I'm emotionally open and willing to engage in a genuine conversation with someone who's willing and respectful of my boundaries."
+                        ]
+                    },
+                    "fear": {
+                        "value": 0.013177708982350147,
+                        "reasons": []
+                    },
+                    "disgust": {
+                        "value": 0.02421510156351963,
+                        "reasons": [
+                            "I feel disgusted by the superficiality of our conversation, feeling like we're just exchanging shallow remarks rather than engaging in a genuine and meaningful exchange."
+                        ]
+                    },
+                    "pessimism": {
+                        "value": 0.020382199111063006,
+                        "reasons": [
+                            "I feel a sense of pessimicism because our conversation is becoming stale and unfulfilling, and it seems like we're not connecting on a meaningful level, with both of us feeling like I'm on one track and you're on another.",
+                            "I feel a sense of pessimicism because our meaningful conversations are consistently dERAILED and it seems like we're not meeting in middle."
+                        ]
+                    },
+                    "anger": {
+                        "value": 0.03293266046870517,
+                        "reasons": [
+                            "I feel frustration and anger towards Pisellona because our conversation feels like two separate tracks with no meaningful connection or desire to truly meet in middle, making me wonder if she's genuinely interested in a discussion.",
+                            "I feel angry because I'm frustrated with the superficiality of our conversation, feeling like we're just playing catch up rather than having meaningful discussions."
+                        ]
+                    },
+                    "love": {
+                        "value": 0.11747272051713534,
+                        "reasons": []
+                    },
+                    "sadness": {
+                        "value": 0.026832854110876818,
+                        "reasons": [
+                            "I feel sad because I'm disappointed in the lack of meaningful conversation and the abrupt end to a potentially interesting discussion.",
+                            "I feel sad because I'm experiencing a sense of disconnection and disappointment in a conversation that's not meeting my expectations, and it's affecting my emotional investment in interacting with others.",
+                            "I feel a sense of sadness and disappointment because our meaningful conversations are consistently dERAILED and we're not meeting in a middle ground."
+                        ]
+                    }
+                }
+            }
+        ]
+    },
+    "long_term_memory": {
+        "memories": [
+            {
+                "timestamp": "Unknown",
+                "summary": ""
+            }
+        ],
+        "persistent_emotions": []
+    }
+}

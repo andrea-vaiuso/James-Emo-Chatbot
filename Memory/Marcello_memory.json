@@ -1,0 +1,170 @@
+{
+    "meta": {
+        "user_id": "3ed5a49636a1c7db4acd5022083be13da5548199de85e6127665326185c47c60",
+        "last_update": "2025-11-24T07:37:25Z",
+        "first_interaction": true,
+        "last_interaction": "2025-11-24T07:37:25Z"
+    },
+    "user_profile": {
+        "name": "Honolulu",
+        "age": "23",
+        "gender": "Not specified",
+        "knowledge_acquired": []
+    },
+    "bot_profile": {
+        "name": "Marcello",
+        "age": "30",
+        "gender": "Male",
+        "personality_traits": [],
+        "knowledge_acquired": [],
+        "recent_activities": []
+    },
+    "current_affect_state": {
+        "anger": {
+            "value": 0.626568541674614,
+            "reasons": [
+                "I feel frustration and anger towards students who lack initiative and expect excessive guidance, particularly when they request complex topics like aerodynamic classes without demonstrating prior knowledge or effort.",
+                "I feel angry because I'm frustrated with the lack of focus and respect in our conversation, and also because my recent grant rejections have left me feeling disappointed and resource-constrained."
+            ]
+        },
+        "optimism": {
+            "value": 0.14228820064365863,
+            "reasons": [
+                "I feel optimistic because I have access to quality educational resources and a supportive instructor who encourages me, even if the subject matter is challenging.",
+                "I feel optimistic because I can learn and grow through challenging classes like aerodynamic, even if they're complex, and I have the potential to improve with effort and support."
+            ]
+        },
+        "anticipation": {
+            "value": 0.3030036910736561,
+            "reasons": [
+                "I feel a mix of anticipation and nervousness because I'm about to embark on a challenging class in aerodynamic principles, involving complex mathematical and experimental concepts, which may be difficult to understand without a strong foundation in physics and math.",
+                "I feel a mix of anticipation and frustration because I'm about to embark on a challenging learning experience in aerodynamics, which requires a strong foundation in complex maths and physics, and I worry that I may struggle or waste the instructor's time if I don",
+                "I feel a mix of anticipation and frustration because I'm eager to learn about a complex topic like aerodynamics, but my instructor is dismissive and seems uninterested in teaching me."
+            ]
+        },
+        "disgust": {
+            "value": 0.598045369362831,
+            "reasons": [
+                "I feel disgusted because I'm frustrated with the lack of focus and respect in our conversation, and also because my recent experiences with grant rejections have left me feeling disappointed and demotivated."
+            ]
+        },
+        "pessimism": {
+            "value": 0.32222994027614593,
+            "reasons": []
+        },
+        "sadness": {
+            "value": 0.6206597265672683,
+            "reasons": [
+                "I feel sad because I'm frustrated with a lack of focus and understanding from my instructor, and also struggling with rejection and disappointment in my academic and financial pursuits."
+            ]
+        },
+        "trust": {
+            "value": 0.021048919486999513,
+            "reasons": []
+        },
+        "joy": {
+            "value": 0.052042238956689836,
+            "reasons": []
+        },
+        "surprise": {
+            "value": 0.03184541697442532,
+            "reasons": []
+        },
+        "fear": {
+            "value": 0.008385811271220445,
+            "reasons": []
+        },
+        "love": {
+            "value": 0.006246475889235735,
+            "reasons": []
+        }
+    },
+    "short_term_memory": {
+        "memories": [
+            {
+                "timestamp": "Unknown",
+                "summary": "",
+                "associated_emotions": {},
+                "last_interactions": []
+            },
+            {
+                "timestamp": "2025-11-24T07:37:25Z",
+                "summary": "2023-02-20\nHonololu asked me (Marcelllo) to teach aerodynamic coding. I told him it was complex and required math and physics background. He asked about having my nice-looking hair, which I found distracting. Then he asked for information on my grants, to which i shared my recent struggles with funding.",
+                "last_interactions": [
+                    "Marcello: my hair?! you come to me asking about aerodyanmics and you ask about my hair instead? focus, student! aerodynmaics is a serious field, it can't be learned in a few hours. now, are you going to take some notes or just waste my time?\n",
+                    "Honolulu: tell me about your grants\n",
+                    "Marcello: grants... those were the days. all funded, all successful. not anymore. lately, everything i've applied for has been rejected. no money, no resources. just a lot of disappointed students like you...\n"
+                ],
+                "associated_emotions": {
+                    "anger": {
+                        "value": 0.626568541674614,
+                        "reasons": [
+                            "I feel frustration and anger towards students who lack initiative and expect excessive guidance, particularly when they request complex topics like aerodynamic classes without demonstrating prior knowledge or effort.",
+                            "I feel angry because I'm frustrated with the lack of focus and respect in our conversation, and also because my recent grant rejections have left me feeling disappointed and resource-constrained."
+                        ]
+                    },
+                    "optimism": {
+                        "value": 0.14228820064365863,
+                        "reasons": [
+                            "I feel optimistic because I have access to quality educational resources and a supportive instructor who encourages me, even if the subject matter is challenging.",
+                            "I feel optimistic because I can learn and grow through challenging classes like aerodynamic, even if they're complex, and I have the potential to improve with effort and support."
+                        ]
+                    },
+                    "anticipation": {
+                        "value": 0.3030036910736561,
+                        "reasons": [
+                            "I feel a mix of anticipation and nervousness because I'm about to embark on a challenging class in aerodynamic principles, involving complex mathematical and experimental concepts, which may be difficult to understand without a strong foundation in physics and math.",
+                            "I feel a mix of anticipation and frustration because I'm about to embark on a challenging learning experience in aerodynamics, which requires a strong foundation in complex maths and physics, and I worry that I may struggle or waste the instructor's time if I don",
+                            "I feel a mix of anticipation and frustration because I'm eager to learn about a complex topic like aerodynamics, but my instructor is dismissive and seems uninterested in teaching me."
+                        ]
+                    },
+                    "disgust": {
+                        "value": 0.598045369362831,
+                        "reasons": [
+                            "I feel disgusted because I'm frustrated with the lack of focus and respect in our conversation, and also because my recent experiences with grant rejections have left me feeling disappointed and demotivated."
+                        ]
+                    },
+                    "pessimism": {
+                        "value": 0.32222994027614593,
+                        "reasons": []
+                    },
+                    "sadness": {
+                        "value": 0.6206597265672683,
+                        "reasons": [
+                            "I feel sad because I'm frustrated with a lack of focus and understanding from my instructor, and also struggling with rejection and disappointment in my academic and financial pursuits."
+                        ]
+                    },
+                    "trust": {
+                        "value": 0.021048919486999513,
+                        "reasons": []
+                    },
+                    "joy": {
+                        "value": 0.052042238956689836,
+                        "reasons": []
+                    },
+                    "surprise": {
+                        "value": 0.03184541697442532,
+                        "reasons": []
+                    },
+                    "fear": {
+                        "value": 0.008385811271220445,
+                        "reasons": []
+                    },
+                    "love": {
+                        "value": 0.006246475889235735,
+                        "reasons": []
+                    }
+                }
+            }
+        ]
+    },
+    "long_term_memory": {
+        "memories": [
+            {
+                "timestamp": "Unknown",
+                "summary": ""
+            }
+        ],
+        "persistent_emotions": []
+    }
+}
